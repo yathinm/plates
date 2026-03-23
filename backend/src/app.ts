@@ -5,6 +5,7 @@ import { AppError } from './common/errors';
 import { authRouter } from './modules/auth';
 import { exerciseRouter } from './modules/exercises';
 import { routineRouter } from './modules/routines';
+import { workoutRouter } from './modules/workouts';
 
 export const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/exercises', exerciseRouter);
 app.use('/routines', routineRouter);
+app.use('/workouts', workoutRouter);
 
 app.get('/health', async (_req: Request, res: Response) => {
   const [pg, rd] = await Promise.all([checkPostgres(), checkRedis()]);
