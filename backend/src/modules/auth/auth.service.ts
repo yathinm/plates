@@ -1,5 +1,4 @@
-import { eq, or } from 'drizzle-orm';
-import { db, users } from '../../database';
+import { prisma } from '../../database';
 import { hashPassword, verifyPassword } from '../../common/password';
 import { signToken } from '../../common/jwt';
 import { ConflictError, UnauthorizedError, ValidationError } from '../../common/errors';
@@ -12,24 +11,23 @@ interface SignupInput {
 }
 
 interface LoginInput {
-  login: string;   // username or email
+  login: string;
   password: string;
 }
 
-interface AuthResult {
-  token: string;
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    displayName: string | null;
-    bio: string | null;
-    avatarUrl: string | null;
-    createdAt: Date;
+function sanitizeUser(user: any) {
+  return {
+    id:          user.id,
+    username:    user.username,
+    email:       user.email,
+    displayName: user.displayName,
+    bio:         user.bio,
+    avatarUrl:   user.avatarUrl,
+    createdAt:   user.createdAt,
   };
 }
 
-export async function signup(input: SignupInput): Promise<AuthResult> {
+export async function signup(input: SignupInput) {
   const { username, email, password, displayName } = input;
 
   if (!username || username.length < 3 || username.length > 30) {
@@ -42,82 +40,54 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     throw new ValidationError('Password must be at least 8 characters');
   }
 
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(or(eq(users.username, username), eq(users.email, email)))
-    .limit(1);
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ username }, { email }] },
+    select: { id: true },
+  });
 
-  if (existing.length > 0) {
+  if (existing) {
     throw new ConflictError('Username or email already taken');
   }
 
   const passwordHash = await hashPassword(password);
 
-  const [created] = await db
-    .insert(users)
-    .values({
+  const user = await prisma.user.create({
+    data: {
       username,
       email,
       passwordHash,
       displayName: displayName || username,
-    })
-    .returning();
-
-  const token = signToken({ userId: created.id, username: created.username });
-
-  return {
-    token,
-    user: {
-      id: created.id,
-      username: created.username,
-      email: created.email,
-      displayName: created.displayName,
-      bio: created.bio,
-      avatarUrl: created.avatarUrl,
-      createdAt: created.createdAt,
     },
-  };
+  });
+
+  const token = signToken({ userId: user.id, username: user.username });
+
+  return { token, user: sanitizeUser(user) };
 }
 
-export async function login(input: LoginInput): Promise<AuthResult> {
+export async function login(input: LoginInput) {
   const { login, password } = input;
 
   if (!login || !password) {
     throw new ValidationError('Login and password are required');
   }
 
-  const [found] = await db
-    .select()
-    .from(users)
-    .where(
-      login.includes('@')
-        ? eq(users.email, login)
-        : eq(users.username, login),
-    )
-    .limit(1);
+  const user = await prisma.user.findFirst({
+    where: login.includes('@')
+      ? { email: login }
+      : { username: login },
+  });
 
-  if (!found) {
+  if (!user) {
     throw new UnauthorizedError('Invalid credentials');
   }
 
-  const valid = await verifyPassword(password, found.passwordHash);
+  const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     throw new UnauthorizedError('Invalid credentials');
   }
 
-  const token = signToken({ userId: found.id, username: found.username });
+  const token = signToken({ userId: user.id, username: user.username });
 
-  return {
-    token,
-    user: {
-      id: found.id,
-      username: found.username,
-      email: found.email,
-      displayName: found.displayName,
-      bio: found.bio,
-      avatarUrl: found.avatarUrl,
-      createdAt: found.createdAt,
-    },
-  };
+  return { token, user: sanitizeUser(user) };
 }

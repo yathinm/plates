@@ -1,1 +1,1 @@
-export { routineRouter } from './routine.router';
+export { routineRoutes } from './routine.routes';

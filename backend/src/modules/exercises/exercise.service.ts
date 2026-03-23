@@ -1,8 +1,8 @@
-import { eq, and, ilike, sql } from 'drizzle-orm';
-import { db, exercises, getRedis } from '../../database';
+import { Prisma } from '@prisma/client';
+import { prisma, getRedis } from '../../database';
 
 const CACHE_KEY = 'exercises';
-const CACHE_TTL = 3600; // 1 hour
+const CACHE_TTL = 3600;
 
 interface ExerciseFilters {
   muscle?: string;
@@ -25,42 +25,38 @@ export async function listExercises(filters: ExerciseFilters = {}) {
     const redis = getRedis();
     const cached = await redis.get(key);
     if (cached) return JSON.parse(cached);
-  } catch {
-    // Redis miss or down -- fall through to DB
-  }
+  } catch { /* fall through */ }
 
-  const conditions = [];
+  const where: Prisma.ExerciseWhereInput = {};
 
   if (filters.muscle) {
-    conditions.push(eq(exercises.primaryMuscle, filters.muscle as any));
+    where.primaryMuscle = filters.muscle as any;
   }
   if (filters.category) {
-    conditions.push(eq(exercises.category, filters.category as any));
+    where.category = filters.category as any;
   }
   if (filters.search) {
-    conditions.push(ilike(exercises.name, `%${filters.search}%`));
+    where.name = { contains: filters.search, mode: 'insensitive' };
   }
 
-  const rows = await db
-    .select({
-      id:                 exercises.id,
-      name:               exercises.name,
-      primaryMuscle:      exercises.primaryMuscle,
-      secondaryMuscles:   exercises.secondaryMuscles,
-      category:           exercises.category,
-      defaultRestSeconds: exercises.defaultRestSeconds,
-      isCustom:           exercises.isCustom,
-    })
-    .from(exercises)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(exercises.primaryMuscle, exercises.name);
+  const rows = await prisma.exercise.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      primaryMuscle: true,
+      secondaryMuscles: true,
+      category: true,
+      defaultRestSeconds: true,
+      isCustom: true,
+    },
+    orderBy: [{ primaryMuscle: 'asc' }, { name: 'asc' }],
+  });
 
   try {
     const redis = getRedis();
     await redis.set(key, JSON.stringify(rows), { EX: CACHE_TTL });
-  } catch {
-    // Cache write failure is non-fatal
-  }
+  } catch { /* non-fatal */ }
 
   return rows;
 }
@@ -70,7 +66,5 @@ export async function invalidateExerciseCache() {
     const redis = getRedis();
     const keys = await redis.keys(`${CACHE_KEY}*`);
     if (keys.length > 0) await redis.del(keys);
-  } catch {
-    // Non-fatal
-  }
+  } catch { /* non-fatal */ }
 }

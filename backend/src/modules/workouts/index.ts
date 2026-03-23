@@ -1,1 +1,1 @@
-export { workoutRouter } from './workout.router';
+export { workoutRoutes } from './workout.routes';

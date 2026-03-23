@@ -1,4 +1,3 @@
-export { db, pool, checkPostgres } from './postgres';
+export { prisma, checkPostgres } from './prisma';
 export { connectRedis, getRedis, checkRedis, disconnectRedis } from './redis';
 export { timescale } from './timescale';
-export * from './schema';

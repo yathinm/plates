@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────
+
+enum MuscleGroup {
+  chest
+  back
+  shoulders
+  biceps
+  triceps
+  forearms
+  quads
+  hamstrings
+  glutes
+  calves
+  abs
+  traps
+  lats
+  full_body
+
+  @@map("muscle_group")
+}
+
+enum ExerciseCategory {
+  compound
+  isolation
+  cardio
+  bodyweight
+
+  @@map("exercise_category")
+}
+
+// ── Users ──────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique @db.VarChar(30)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  displayName  String?  @map("display_name") @db.VarChar(60)
+  avatarUrl    String?  @map("avatar_url")
+  bio          String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  exercises Exercise[]
+  routines  Routine[]
+  workouts  Workout[]
+  followers Follower[] @relation("following")
+  following Follower[] @relation("follower")
+
+  @@map("users")
+}
+
+// ── Followers ──────────────────────────────────────────────────
+
+model Follower {
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("followers")
+}
+
+// ── Exercises ──────────────────────────────────────────────────
+
+model Exercise {
+  id                 String           @id @default(uuid()) @db.Uuid
+  name               String           @unique @db.VarChar(100)
+  primaryMuscle      MuscleGroup      @map("primary_muscle")
+  secondaryMuscles   MuscleGroup[]    @default([]) @map("secondary_muscles")
+  category           ExerciseCategory
+  defaultRestSeconds Int              @default(90) @map("default_rest_seconds")
+  createdBy          String?          @map("created_by") @db.Uuid
+  isCustom           Boolean          @default(false) @map("is_custom")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  creator          User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  routineExercises RoutineExercise[]
+  workoutSets      WorkoutSet[]
+
+  @@index([primaryMuscle])
+  @@index([category])
+  @@map("exercises")
+}
+
+// ── Routines ───────────────────────────────────────────────────
+
+model Routine {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  name         String   @db.VarChar(100)
+  description  String?
+  isPublic     Boolean  @default(false) @map("is_public")
+  forkedFromId String?  @map("forked_from_id") @db.Uuid
+  forkCount    Int      @default(0) @map("fork_count")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forkedFrom Routine?          @relation("forks", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks      Routine[]         @relation("forks")
+  exercises  RoutineExercise[]
+  workouts   Workout[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("routines")
+}
+
+model RoutineExercise {
+  id         String  @id @default(uuid()) @db.Uuid
+  routineId  String  @map("routine_id") @db.Uuid
+  exerciseId String  @map("exercise_id") @db.Uuid
+  position   Int
+  targetSets Int     @default(3) @map("target_sets")
+  targetReps Int     @default(10) @map("target_reps")
+  notes      String?
+
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([routineId, position])
+  @@index([routineId])
+  @@map("routine_exercises")
+}
+
+// ── Workouts (TimescaleDB hypertable) ──────────────────────────
+
+model Workout {
+  id         String    @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  routineId  String?   @map("routine_id") @db.Uuid
+  name       String?   @db.VarChar(100)
+  startedAt  DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+  notes      String?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine Routine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
+
+  @@id([id, startedAt])
+  @@index([userId, startedAt(sort: Desc)])
+  @@map("workouts")
+}
+
+// ── Workout Sets (TimescaleDB hypertable) ──────────────────────
+// No FK to workouts (composite PK prevents it) — joined at app level
+
+model WorkoutSet {
+  id          String    @default(uuid()) @db.Uuid
+  workoutId   String    @map("workout_id") @db.Uuid
+  exerciseId  String    @map("exercise_id") @db.Uuid
+  setNumber   Int       @map("set_number") @db.SmallInt
+  weightKg    Decimal?  @map("weight_kg") @db.Decimal(6, 2)
+  reps        Int?      @db.SmallInt
+  rpe         Decimal?  @db.Decimal(3, 1)
+  rir         Int?      @db.SmallInt
+  durationSec Int?      @map("duration_sec")
+  restSec     Int?      @map("rest_sec")
+  videoUrl    String?   @map("video_url")
+  performedAt DateTime  @default(now()) @map("performed_at") @db.Timestamptz(6)
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@id([id, performedAt])
+  @@index([workoutId, performedAt(sort: Desc)])
+  @@index([exerciseId, performedAt(sort: Desc)])
+  @@map("workout_sets")
+}

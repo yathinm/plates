@@ -1,5 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
-import { db, routines, routineExercises, exercises } from '../../database';
+import { prisma } from '../../database';
 import { ValidationError, NotFoundError } from '../../common/errors';
 
 interface RoutineExerciseInput {
@@ -18,84 +17,74 @@ interface CreateRoutineInput {
 }
 
 export async function createRoutine(userId: string, input: CreateRoutineInput) {
-  const { name, description, isPublic, exercises: exerciseInputs } = input;
+  const { name, description, isPublic, exercises } = input;
 
   if (!name || name.length < 1 || name.length > 100) {
     throw new ValidationError('Routine name must be 1-100 characters');
   }
-  if (!exerciseInputs || exerciseInputs.length === 0) {
+  if (!exercises || exercises.length === 0) {
     throw new ValidationError('A routine must have at least one exercise');
   }
 
-  const [routine] = await db
-    .insert(routines)
-    .values({
+  const routine = await prisma.routine.create({
+    data: {
       userId,
       name,
       description: description || null,
       isPublic: isPublic ?? false,
-    })
-    .returning();
-
-  const exerciseRows = exerciseInputs.map((e) => ({
-    routineId:  routine.id,
-    exerciseId: e.exerciseId,
-    position:   e.position,
-    targetSets: e.targetSets ?? 3,
-    targetReps: e.targetReps ?? 10,
-    notes:      e.notes || null,
-  }));
-
-  await db.insert(routineExercises).values(exerciseRows);
+      exercises: {
+        create: exercises.map((e) => ({
+          exerciseId: e.exerciseId,
+          position:   e.position,
+          targetSets: e.targetSets ?? 3,
+          targetReps: e.targetReps ?? 10,
+          notes:      e.notes || null,
+        })),
+      },
+    },
+  });
 
   return getRoutineWithExercises(routine.id);
 }
 
 export async function listUserRoutines(userId: string) {
-  const rows = await db
-    .select({
-      id:          routines.id,
-      name:        routines.name,
-      description: routines.description,
-      isPublic:    routines.isPublic,
-      forkCount:   routines.forkCount,
-      createdAt:   routines.createdAt,
-      updatedAt:   routines.updatedAt,
-    })
-    .from(routines)
-    .where(eq(routines.userId, userId))
-    .orderBy(desc(routines.updatedAt));
-
-  return rows;
+  return prisma.routine.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      isPublic: true,
+      forkCount: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
 }
 
 export async function getRoutineWithExercises(routineId: string) {
-  const [routine] = await db
-    .select()
-    .from(routines)
-    .where(eq(routines.id, routineId))
-    .limit(1);
+  const routine = await prisma.routine.findUnique({
+    where: { id: routineId },
+    include: {
+      exercises: {
+        orderBy: { position: 'asc' },
+        include: {
+          exercise: {
+            select: {
+              id: true,
+              name: true,
+              primaryMuscle: true,
+              category: true,
+              defaultRestSeconds: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
   if (!routine) throw new NotFoundError('Routine', routineId);
-
-  const items = await db
-    .select({
-      position:   routineExercises.position,
-      targetSets: routineExercises.targetSets,
-      targetReps: routineExercises.targetReps,
-      notes:      routineExercises.notes,
-      exercise: {
-        id:                 exercises.id,
-        name:               exercises.name,
-        primaryMuscle:      exercises.primaryMuscle,
-        category:           exercises.category,
-        defaultRestSeconds: exercises.defaultRestSeconds,
-      },
-    })
-    .from(routineExercises)
-    .innerJoin(exercises, eq(routineExercises.exerciseId, exercises.id))
-    .where(eq(routineExercises.routineId, routineId))
-    .orderBy(routineExercises.position);
 
   return {
     id:          routine.id,
@@ -105,6 +94,12 @@ export async function getRoutineWithExercises(routineId: string) {
     forkCount:   routine.forkCount,
     createdAt:   routine.createdAt,
     updatedAt:   routine.updatedAt,
-    exercises:   items,
+    exercises: routine.exercises.map((re) => ({
+      position:   re.position,
+      targetSets: re.targetSets,
+      targetReps: re.targetReps,
+      notes:      re.notes,
+      exercise:   re.exercise,
+    })),
   };
 }

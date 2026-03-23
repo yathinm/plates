@@ -1,1 +1,1 @@
-export { exerciseRouter } from './exercise.router';
+export { exerciseRoutes } from './exercise.routes';

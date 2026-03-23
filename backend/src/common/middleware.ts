@@ -1,40 +1,37 @@
-import { Request, Response, NextFunction } from 'express';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken, JwtPayload } from './jwt';
 import { UnauthorizedError, ForbiddenError } from './errors';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
+declare module 'fastify' {
+  interface FastifyRequest {
+    user?: JwtPayload;
   }
 }
 
 /**
- * Requires a valid Bearer token. Attaches req.user with { userId, username }.
+ * Fastify preHandler hook: requires a valid Bearer token.
+ * Attaches request.user with { userId, username }.
  */
-export function requireAuth(req: Request, _res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
+export async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
+  const header = request.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Missing or malformed Authorization header'));
+    throw new UnauthorizedError('Missing or malformed Authorization header');
   }
 
   try {
-    req.user = verifyToken(header.slice(7));
-    next();
+    request.user = verifyToken(header.slice(7));
   } catch {
-    next(new UnauthorizedError('Invalid or expired token'));
+    throw new UnauthorizedError('Invalid or expired token');
   }
 }
 
 /**
- * Ensures the authenticated user matches the :userId route param.
+ * Fastify preHandler hook: ensures the authenticated user matches :userId param.
  * Must be used after requireAuth.
  */
-export function requireOwner(req: Request, _res: Response, next: NextFunction) {
-  const paramId = req.params.userId;
-  if (paramId && req.user?.userId !== paramId) {
-    return next(new ForbiddenError('You can only access your own resources'));
+export async function requireOwner(request: FastifyRequest, _reply: FastifyReply) {
+  const { userId } = request.params as { userId?: string };
+  if (userId && request.user?.userId !== userId) {
+    throw new ForbiddenError('You can only access your own resources');
   }
-  next();
 }

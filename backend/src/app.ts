@@ -1,46 +1,50 @@
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { checkPostgres, checkRedis } from './database';
 import { AppError } from './common/errors';
-import { authRouter } from './modules/auth';
-import { exerciseRouter } from './modules/exercises';
-import { routineRouter } from './modules/routines';
-import { workoutRouter } from './modules/workouts';
+import { authRoutes } from './modules/auth';
+import { exerciseRoutes } from './modules/exercises';
+import { routineRoutes } from './modules/routines';
+import { workoutRoutes } from './modules/workouts';
 
-export const app = express();
+export async function buildApp() {
+  const app = Fastify({ logger: false });
 
-app.use(cors());
-app.use(express.json());
+  await app.register(cors);
 
-app.use('/auth', authRouter);
-app.use('/exercises', exerciseRouter);
-app.use('/routines', routineRouter);
-app.use('/workouts', workoutRouter);
+  // ── Error handler ──────────────────────────────────────────
+  app.setErrorHandler((err, _request, reply) => {
+    if (err instanceof AppError) {
+      reply.status(err.statusCode).send({
+        error: { code: err.code, message: err.message },
+      });
+      return;
+    }
 
-app.get('/health', async (_req: Request, res: Response) => {
-  const [pg, rd] = await Promise.all([checkPostgres(), checkRedis()]);
-
-  const status = {
-    api:      'ok' as const,
-    postgres: pg ? 'ok' as const : 'down' as const,
-    redis:    rd ? 'ok' as const : 'down' as const,
-  };
-
-  const allOk = pg && rd;
-  res.status(allOk ? 200 : 503).json(status);
-});
-
-// Global error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      error: { code: err.code, message: err.message },
+    console.error('Unhandled error:', err);
+    reply.status(500).send({
+      error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
     });
-    return;
-  }
-
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
   });
-});
+
+  // ── Routes ─────────────────────────────────────────────────
+  app.register(authRoutes, { prefix: '/auth' });
+  app.register(exerciseRoutes, { prefix: '/exercises' });
+  app.register(routineRoutes, { prefix: '/routines' });
+  app.register(workoutRoutes, { prefix: '/workouts' });
+
+  app.get('/health', async (_request, reply) => {
+    const [pg, rd] = await Promise.all([checkPostgres(), checkRedis()]);
+
+    const status = {
+      api:      'ok' as const,
+      postgres: pg ? 'ok' as const : 'down' as const,
+      redis:    rd ? 'ok' as const : 'down' as const,
+    };
+
+    const allOk = pg && rd;
+    reply.status(allOk ? 200 : 503).send(status);
+  });
+
+  return app;
+}
