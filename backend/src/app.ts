@@ -2,11 +2,14 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { checkPostgres, checkRedis } from './database';
 import { AppError } from './common/errors';
+import { authRouter } from './modules/auth';
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/auth', authRouter);
 
 app.get('/health', async (_req: Request, res: Response) => {
   const [pg, rd] = await Promise.all([checkPostgres(), checkRedis()]);
