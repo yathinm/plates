@@ -2,6 +2,7 @@ import { createClient, RedisClientType } from 'redis';
 import { config } from '../common/config';
 
 let client: RedisClientType;
+let subscriber: RedisClientType;
 
 function getRedisUrl(): string {
   return `redis://:${config.redis.password}@${config.redis.host}:${config.redis.port}`;
@@ -11,12 +12,17 @@ export async function connectRedis(): Promise<RedisClientType> {
   if (client?.isOpen) return client;
 
   client = createClient({ url: getRedisUrl() }) as RedisClientType;
-
   client.on('error', (err) => console.error('Redis error:', err));
   client.on('reconnecting', () => console.log('Redis reconnecting...'));
 
   await client.connect();
   console.log('Connected to Redis');
+
+  // Dedicated subscriber connection for Pub/Sub
+  subscriber = client.duplicate() as RedisClientType;
+  await subscriber.connect();
+  console.log('Connected to Redis (subscriber)');
+
   return client;
 }
 
@@ -25,6 +31,13 @@ export function getRedis(): RedisClientType {
     throw new Error('Redis not connected. Call connectRedis() first.');
   }
   return client;
+}
+
+export function getSubscriber(): RedisClientType {
+  if (!subscriber?.isOpen) {
+    throw new Error('Redis subscriber not connected.');
+  }
+  return subscriber;
 }
 
 export async function checkRedis(): Promise<boolean> {
@@ -37,7 +50,6 @@ export async function checkRedis(): Promise<boolean> {
 }
 
 export async function disconnectRedis(): Promise<void> {
-  if (client?.isOpen) {
-    await client.quit();
-  }
+  if (subscriber?.isOpen) await subscriber.quit();
+  if (client?.isOpen) await client.quit();
 }

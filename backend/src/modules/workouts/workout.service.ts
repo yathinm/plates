@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma, getRedis } from '../../database';
 import { ValidationError, NotFoundError, AppError } from '../../common/errors';
+import { publishEvent, CHANNELS, SocialEvent } from '../social';
 
 const LIVE_KEY = 'live:lifting';
 const LIVE_TTL = 7200;
@@ -22,7 +23,7 @@ interface LogSetInput {
   restSec?: number;
 }
 
-export async function startWorkout(userId: string, input: StartWorkoutInput) {
+export async function startWorkout(userId: string, username: string, input: StartWorkoutInput) {
   const now = new Date();
 
   const workout = await prisma.workout.create({
@@ -45,6 +46,15 @@ export async function startWorkout(userId: string, input: StartWorkoutInput) {
     }));
     await redis.expire(LIVE_KEY, LIVE_TTL);
   } catch { /* non-fatal */ }
+
+  // Broadcast to social feed via Pub/Sub
+  await publishEvent(CHANNELS.WORKOUT_START, {
+    type: 'workout_start',
+    fromUserId: userId,
+    fromUsername: username,
+    payload: { workoutId: workout.id, name: workout.name },
+    timestamp: now.toISOString(),
+  });
 
   return workout;
 }
@@ -99,7 +109,7 @@ export async function logSet(userId: string, workoutId: string, input: LogSetInp
   return { ...inserted, volume: setVolume };
 }
 
-export async function finishWorkout(userId: string, workoutId: string, notes?: string) {
+export async function finishWorkout(userId: string, username: string, workoutId: string, notes?: string) {
   const rows = await prisma.$queryRaw<Array<{ id: string; user_id: string; finished_at: Date | null; started_at: Date }>>`
     SELECT id, user_id, finished_at, started_at FROM workouts WHERE id = ${workoutId}::uuid LIMIT 1
   `;
@@ -153,6 +163,20 @@ export async function finishWorkout(userId: string, workoutId: string, notes?: s
     const redis = getRedis();
     await redis.hDel(LIVE_KEY, userId);
   } catch { /* non-fatal */ }
+
+  // Broadcast workout completion via Pub/Sub
+  await publishEvent(CHANNELS.WORKOUT_FINISH, {
+    type: 'workout_finish',
+    fromUserId: userId,
+    fromUsername: username,
+    payload: {
+      workoutId,
+      durationMinutes: durationMin,
+      totalVolume: parseFloat(String(totals.total_volume)),
+      totalSets: totals.total_sets,
+    },
+    timestamp: now.toISOString(),
+  });
 
   return {
     workoutId,
