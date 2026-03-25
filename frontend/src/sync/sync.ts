@@ -1,8 +1,10 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
 import type { Database } from '@nozbe/watermelondb';
 import type { SyncPullArgs, SyncPushArgs } from '@nozbe/watermelondb/sync';
+import Toast from 'react-native-toast-message';
 
 import { api } from '@/utils/api';
+import { useSyncUi } from '@/stores/syncUi';
 
 import { syncConflictResolver } from './conflictResolver';
 import { buildPushBody, mapPullResponseToWatermelonChanges } from './mappers';
@@ -45,14 +47,28 @@ export function createPushChanges(database: Database) {
 
 /**
  * One full WatermelonDB sync (pull then push). Uses `synchronize()` from the library.
+ * Sets {@link useSyncUi} `isSyncing` for the UI plate; shows a success toast when the round completes.
  */
 export async function runSynchronize(database: Database): Promise<void> {
-  await synchronize({
-    database,
-    pullChanges: createPullChanges(),
-    pushChanges: createPushChanges(database),
-    conflictResolver: syncConflictResolver,
-  });
+  const { setSyncing } = useSyncUi.getState();
+  setSyncing(true);
+  try {
+    await synchronize({
+      database,
+      pullChanges: createPullChanges(),
+      pushChanges: createPushChanges(database),
+      conflictResolver: syncConflictResolver,
+    });
+    Toast.show({
+      type: 'success',
+      text1: 'Workout Synced!',
+      text2: 'Your data is safe and up to date.',
+      position: 'top',
+      visibilityTime: 2800,
+    });
+  } finally {
+    setSyncing(false);
+  }
 }
 
 /**

@@ -17,6 +17,8 @@ import { gym, brand } from '@/constants/Colors';
 import { useAuth } from '@/stores/auth';
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 import ActiveWorkoutOverlay from '@/components/ActiveWorkoutOverlay';
+import { PlatesToast } from '@/components/PlatesToast';
+import { useSyncOnForeground } from '@/hooks/useSyncOnForeground';
 import { database } from '@/src/db';
 
 export { ErrorBoundary } from 'expo-router';
@@ -94,6 +96,8 @@ function RootLayoutNav() {
   // Single timer instance for the entire app — ticks the workout store every second
   useWorkoutTimer();
 
+  useSyncOnForeground(database, Boolean(token));
+
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -126,6 +130,7 @@ function RootLayoutNav() {
 
             {/* Mini-player overlay — visible on all tabs except Workout when a session is active */}
             {token && <ActiveWorkoutOverlay />}
+            <PlatesToast />
           </View>
           <StatusBar style="light" />
         </ThemeProvider>
