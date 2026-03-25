@@ -21,7 +21,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO exercises (name, primary_muscle, secondary_muscles, category, default_rest_seconds) VALUES
   ('Barbell Bench Press',    'chest', '{triceps,shoulders}', 'compound',  180),
   ('Incline Dumbbell Press', 'chest', '{triceps,shoulders}', 'compound',  150),
-  ('Cable Flye',             'chest', '{}',                  'isolation', 90),
+  ('Cable Fly',             'chest', '{}',                  'isolation', 90),
   ('Dips',                   'chest', '{triceps,shoulders}', 'bodyweight',120)
 ON CONFLICT (name) DO NOTHING;
 
@@ -38,7 +38,7 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO exercises (name, primary_muscle, secondary_muscles, category, default_rest_seconds) VALUES
   ('Overhead Press',     'shoulders', '{triceps}',   'compound',  180),
   ('Lateral Raise',      'shoulders', '{}',          'isolation', 60),
-  ('Rear Delt Flye',     'shoulders', '{back}',      'isolation', 60)
+  ('Rear Delt Fly',     'shoulders', '{back}',      'isolation', 60)
 ON CONFLICT (name) DO NOTHING;
 
 -- Legs
