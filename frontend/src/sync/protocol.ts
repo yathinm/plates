@@ -77,6 +77,9 @@ export type PushRequest = {
   changes: Partial<SyncChanges>;
 };
 
+/** Alias for POST /sync/push body. */
+export type PushBody = PushRequest;
+
 export type PushResponse = {
   /** Optional per-row id map for first-time creates (local temp id → server id). */
   id_map?: Record<string, string>;

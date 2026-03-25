@@ -152,5 +152,6 @@ All routes require **`Authorization: Bearer <jwt>`**.
 ## 8. Reference implementation
 
 - Types: `frontend/src/sync/protocol.ts`
+- Client sync: `frontend/src/sync/sync.ts` (`synchronize()` wrapper, 30s retry)
 - API: `backend/src/modules/sync/`
 - Dirty fields: Watermelon schema `workouts` / `sets` (`server_id`, `dirty`)
