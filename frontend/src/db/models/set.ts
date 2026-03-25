@@ -11,10 +11,13 @@ export default class Set extends Model {
     exercises: { type: 'belongs_to', key: 'exercise_id' },
   };
 
+  @field('exercise_id') exerciseId!: string;
   @field('weight') weight!: number;
   @field('reps') reps!: number;
   @field('rpe') rpe!: number;
   @field('is_completed') isCompleted!: boolean;
+  @field('server_id') serverId!: string | null;
+  @field('dirty') dirty!: boolean | null;
 
   @relation('exercises', 'exercise_id') exercise!: Relation<Exercise>;
 }

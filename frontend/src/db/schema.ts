@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 1,
+  version: 2,
   tables: [
     tableSchema({
       name: 'exercise_definitions',
@@ -18,6 +18,8 @@ export const schema = appSchema({
         { name: 'start_time', type: 'number' },
         { name: 'end_time', type: 'number', isOptional: true },
         { name: 'status', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'dirty', type: 'boolean', isOptional: true },
       ],
     }),
     tableSchema({
@@ -36,6 +38,8 @@ export const schema = appSchema({
         { name: 'reps', type: 'number' },
         { name: 'rpe', type: 'number' },
         { name: 'is_completed', type: 'boolean' },
+        { name: 'server_id', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'dirty', type: 'boolean', isOptional: true },
       ],
     }),
   ],
