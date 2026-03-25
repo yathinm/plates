@@ -4,6 +4,14 @@ export const schema = appSchema({
   version: 1,
   tables: [
     tableSchema({
+      name: 'exercise_definitions',
+      columns: [
+        { name: 'name', type: 'string', isIndexed: true },
+        { name: 'primary_muscle', type: 'string', isOptional: true },
+        { name: 'equipment', type: 'string', isOptional: true },
+      ],
+    }),
+    tableSchema({
       name: 'workouts',
       columns: [
         { name: 'name', type: 'string' },
@@ -16,7 +24,7 @@ export const schema = appSchema({
       name: 'exercises',
       columns: [
         { name: 'workout_id', type: 'string', isIndexed: true },
-        { name: 'exercise_definition_id', type: 'string' },
+        { name: 'exercise_definition_id', type: 'string', isIndexed: true },
         { name: 'note', type: 'string' },
       ],
     }),
