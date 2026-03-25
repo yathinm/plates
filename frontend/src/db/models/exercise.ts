@@ -17,6 +17,7 @@ export default class Exercise extends Model {
   };
 
   @field('note') note!: string;
+  @field('workout_id') workoutId!: string;
 
   @relation('workouts', 'workout_id') workout!: Relation<Workout>;
   @relation('exercise_definitions', 'exercise_definition_id')

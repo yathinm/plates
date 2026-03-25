@@ -2,6 +2,7 @@ import { NativeModules, Platform } from 'react-native';
 import Database from '@nozbe/watermelondb/Database';
 import { Q } from '@nozbe/watermelondb';
 
+import { migrations } from './migrations';
 import { schema } from './schema';
 import { models } from './models';
 import type Workout from './models/workout';
@@ -9,7 +10,6 @@ import type Exercise from './models/exercise';
 import type SetModel from './models/set';
 import type ExerciseDefinition from './models/exerciseDefinition';
 
-<<<<<<< HEAD
 /**
  * True when the WatermelonDB native module is linked (custom dev build).
  * Expo Go does not ship it — SQLite + JSI would crash (e.g. initializeJSI on null).
@@ -69,16 +69,6 @@ function createAdapter() {
 }
 
 const adapter = createAdapter();
-=======
-const adapter = new LokiJSAdapter({
-  dbName: 'plates',
-  schema,
-  useWebWorker: false,
-  onSetUpError: (error) => {
-    console.error('WatermelonDB setup failed:', error);
-  },
-});
->>>>>>> parent of 81b4a81 (sync protocol for watermelondb)
 
 export const database = new Database({
   adapter,
@@ -102,6 +92,7 @@ export async function createWorkoutAction(name: string) {
       w.startTime = Date.now();
       w.endTime = null;
       w.status = 'active';
+      w.dirty = true;
     });
     return workout;
   });
@@ -146,7 +137,7 @@ export async function findOrCreateExerciseForWorkoutAction(input: {
     if (existing.length > 0) return existing[0];
 
     const exercise = await exercisesCollection.create((e) => {
-      (e._raw as any).workout_id = input.workoutId;
+      e.workoutId = input.workoutId;
       (e._raw as any).exercise_definition_id = definition.id;
       // We keep a display label in note because schema has no `name` column on exercises
       e.note = input.exerciseName;
@@ -162,8 +153,7 @@ export async function addExerciseToWorkoutAction(input: {
 }) {
   return database.write(async () => {
     const exercise = await exercisesCollection.create((e) => {
-      // Raw FK fields are set through _raw for Watermelon relations
-      (e._raw as any).workout_id = input.workoutId;
+      e.workoutId = input.workoutId;
       (e._raw as any).exercise_definition_id = input.exerciseDefinitionId;
       e.note = input.note ?? '';
     });
@@ -180,11 +170,17 @@ export async function addSetToExerciseAction(input: {
 }) {
   return database.write(async () => {
     const set = await setsCollection.create((s) => {
-      (s._raw as any).exercise_id = input.exerciseId;
+      s.exerciseId = input.exerciseId;
       s.weight = input.weight;
       s.reps = input.reps;
       s.rpe = input.rpe;
       s.isCompleted = input.isCompleted ?? true;
+      s.dirty = true;
+    });
+    const exercise = await exercisesCollection.find(input.exerciseId);
+    const workout = await workoutsCollection.find(exercise.workoutId);
+    await workout.update((w) => {
+      w.dirty = true;
     });
     return set;
   });
@@ -205,11 +201,16 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
     });
 
     const set = await setsCollection.create((s) => {
-      (s._raw as any).exercise_id = exercise.id;
+      s.exerciseId = exercise.id;
       s.weight = input.weight;
       s.reps = input.reps;
       s.rpe = input.rpe;
       s.isCompleted = input.isCompleted ?? true;
+      s.dirty = true;
+    });
+    const workout = await workoutsCollection.find(input.workoutId);
+    await workout.update((w) => {
+      w.dirty = true;
     });
     return set;
   });
@@ -218,6 +219,11 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
 export async function removeSetAction(setId: string) {
   return database.write(async () => {
     const set = await setsCollection.find(setId);
+    const exercise = await exercisesCollection.find(set.exerciseId);
+    const workout = await workoutsCollection.find(exercise.workoutId);
+    await workout.update((w) => {
+      w.dirty = true;
+    });
     await set.destroyPermanently();
   });
 }
@@ -228,6 +234,7 @@ export async function finishWorkoutAction(workoutId: string) {
     await workout.update((w) => {
       w.endTime = Date.now();
       w.status = 'completed';
+      w.dirty = true;
     });
     return workout;
   });
@@ -239,6 +246,7 @@ export async function discardWorkoutAction(workoutId: string) {
     await workout.update((w) => {
       w.endTime = Date.now();
       w.status = 'discarded';
+      w.dirty = true;
     });
     return workout;
   });
