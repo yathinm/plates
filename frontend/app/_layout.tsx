@@ -1,3 +1,4 @@
+import '../polyfills/fix-dom-event-phase-descriptors';
 import '../global.css';
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
