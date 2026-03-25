@@ -1,5 +1,6 @@
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import Database from '@nozbe/watermelondb/Database';
+import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import { Q } from '@nozbe/watermelondb';
 
 import { schema } from './schema';
@@ -9,76 +10,15 @@ import type Exercise from './models/exercise';
 import type SetModel from './models/set';
 import type ExerciseDefinition from './models/exerciseDefinition';
 
-<<<<<<< HEAD
-/**
- * True when the WatermelonDB native module is linked (custom dev build).
- * Expo Go does not ship it — SQLite + JSI would crash (e.g. initializeJSI on null).
- */
-function watermelondbNativeAvailable(): boolean {
-  if (Platform.OS === 'web') return false;
-  const g = globalThis as typeof globalThis & {
-    nativeWatermelonCreateAdapter?: unknown;
-  };
-  return (
-    NativeModules.WMDatabaseBridge != null ||
-    typeof g.nativeWatermelonCreateAdapter === 'function'
-  );
-}
-
-function createLokiAdapter() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const LokiJSAdapter = require('@nozbe/watermelondb/adapters/lokijs').default;
-  return new LokiJSAdapter({
-    dbName: 'plates',
-    schema,
-    migrations,
-    useWebWorker: false,
-    // Required by WatermelonDB 0.28+ (Loki / IndexedDB)
-    useIncrementalIndexedDB: true,
-    onSetUpError: (error: Error) => {
-      console.error('WatermelonDB setup failed:', error);
-    },
-  });
-}
-
-/**
- * One module = one `Database` class identity (fixes `instanceof` in DatabaseProvider).
- * Web + Expo Go use Loki; a dev client with native WatermelonDB uses SQLite.
- */
-function createAdapter() {
-  if (Platform.OS === 'web' || !watermelondbNativeAvailable()) {
-    if (Platform.OS !== 'web' && __DEV__) {
-      console.warn(
-        '[db] WatermelonDB native module not found — using Loki (e.g. Expo Go). Use a dev build for SQLite persistence.',
-      );
-    }
-    return createLokiAdapter();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const SQLiteAdapter = require('@nozbe/watermelondb/adapters/sqlite').default;
-  return new SQLiteAdapter({
-    dbName: 'plates',
-    schema,
-    migrations,
-    jsi: true,
-    onSetUpError: (error: Error) => {
-      console.error('WatermelonDB setup failed:', error);
-    },
-  });
-}
-
-const adapter = createAdapter();
-=======
-const adapter = new LokiJSAdapter({
+const adapter = new SQLiteAdapter({
   dbName: 'plates',
   schema,
-  useWebWorker: false,
+  // JSI gives near-native performance on iOS/Android dev builds
+  jsi: Platform.OS !== 'web',
   onSetUpError: (error) => {
     console.error('WatermelonDB setup failed:', error);
   },
 });
->>>>>>> parent of 81b4a81 (sync protocol for watermelondb)
 
 export const database = new Database({
   adapter,

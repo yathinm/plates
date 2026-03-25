@@ -15,10 +15,6 @@ export default class Workout extends Model {
   @field('start_time') startTime!: number;
   @field('end_time') endTime!: number | null;
   @field('status') status!: string;
-  /** Server UUID after first successful sync; null until then. */
-  @field('server_id') serverId!: string | null;
-  /** Local-only: true = pending push; false = clean; null = legacy / treat as pending. */
-  @field('dirty') dirty!: boolean | null;
 
   @children('exercises') exercises!: Query<Exercise>;
 }
