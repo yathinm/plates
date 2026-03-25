@@ -10,7 +10,8 @@ import type Exercise from '@/src/db/models/exercise';
 import type SetModel from '@/src/db/models/set';
 
 type BaseProps = {
-  workout: Workout;
+  /** 0 or 1 row — query-based observe never throws if the row was wiped (e.g. DB reset while Zustand still had `localDbId`). */
+  workouts: Workout[];
   exercises: Exercise[];
   sets: SetModel[];
 };
@@ -20,7 +21,20 @@ type OuterProps = {
   database: Database;
 };
 
-function WorkoutSummaryBase({ workout, exercises, sets }: BaseProps) {
+function WorkoutSummaryBase({ workouts, exercises, sets }: BaseProps) {
+  const workout = workouts[0];
+  if (!workout) {
+    return (
+      <View className="bg-gym-dark rounded-lg p-3 border border-gym-border">
+        <Text className="text-gym-muted text-xs mb-1">Local database</Text>
+        <Text className="text-warning text-sm">
+          No workout row for this session (data may have been reset). Sets above still use the live
+          session; start a new workout after finishing to sync again.
+        </Text>
+      </View>
+    );
+  }
+
   const exerciseIds = new Set(exercises.map((e) => e.id));
   const scopedSets = sets.filter((s: any) => exerciseIds.has(s._raw.exercise_id));
   const totalSets = scopedSets.length;
@@ -47,12 +61,14 @@ function WorkoutSummaryBase({ workout, exercises, sets }: BaseProps) {
 
 const Enhanced = withDatabase(
   withObservables(['workoutId', 'database'], ({ workoutId, database }: OuterProps) => ({
-    workout: database.get<Workout>('workouts').findAndObserve(workoutId),
+    workouts: database
+      .get<Workout>('workouts')
+      .query(Q.where('id', workoutId))
+      .observe(),
     exercises: database
       .get<Exercise>('exercises')
       .query(Q.where('workout_id', workoutId))
       .observe(),
-    // Simple global sets observation; filtered client-side by exercise_id
     sets: database.get<SetModel>('sets').query().observe(),
   }))(WorkoutSummaryBase as any),
 );
