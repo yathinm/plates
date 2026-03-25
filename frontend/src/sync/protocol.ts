@@ -24,6 +24,8 @@ export type WorkoutWire = {
   started_at: number;
   finished_at?: number | null;
   notes?: string | null;
+  /** Server clock (ms). Omitted on client push; always present on pull for LWW. */
+  updated_at?: number;
 };
 
 export type SetWire = {
@@ -36,6 +38,8 @@ export type SetWire = {
   reps?: number | null;
   rpe?: number | null;
   performed_at?: number;
+  /** Server clock (ms). Omitted on client push; present on pull for LWW. */
+  updated_at?: number;
 };
 
 /** Server catalog exercise (global + optional user custom). */

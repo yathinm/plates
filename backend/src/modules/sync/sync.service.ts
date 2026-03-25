@@ -29,6 +29,7 @@ function workoutToWire(w: {
   startedAt: Date;
   finishedAt: Date | null;
   notes: string | null;
+  updatedAt: Date;
 }): WorkoutWire {
   return {
     id: w.id,
@@ -38,6 +39,7 @@ function workoutToWire(w: {
     started_at: ms(w.startedAt),
     finished_at: w.finishedAt ? ms(w.finishedAt) : null,
     notes: w.notes,
+    updated_at: ms(w.updatedAt),
   };
 }
 
@@ -50,6 +52,7 @@ function setToWire(s: {
   reps: number | null;
   rpe: Prisma.Decimal | null;
   performedAt: Date;
+  updatedAt: Date;
 }): SetWire {
   return {
     id: s.id,
@@ -60,6 +63,7 @@ function setToWire(s: {
     reps: s.reps,
     rpe: decToNum(s.rpe),
     performed_at: ms(s.performedAt),
+    updated_at: ms(s.updatedAt),
   };
 }
 

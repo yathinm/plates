@@ -33,5 +33,18 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        addColumns({
+          table: 'workouts',
+          columns: [{ name: 'updated_at', type: 'number' }],
+        }),
+        addColumns({
+          table: 'sets',
+          columns: [{ name: 'updated_at', type: 'number' }],
+        }),
+      ],
+    },
   ],
 });

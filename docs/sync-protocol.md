@@ -74,6 +74,16 @@ Push and pull use the **same** top-level shape so tooling and tests can be share
 - Before first push, the client may use Watermelon’s local id internally; the first successful exchange should **map** local ↔ server (see `server_id` on models).
 - **Deleted** arrays contain **server ids** when the row was known to the server; local-only deletes before any server id are handled by a **pending-deletion queue** (future; see §6).
 
+### 4.4 Conflict resolution (solo lifter — last write wins)
+
+For a single user on multiple devices:
+
+1. **Last write wins** — When the same row was edited offline on two devices, the version with the **greater `updated_at` wins** after both sides are compared in the client `syncConflictResolver`. Values **`≤ 0`** (or missing in memory) mean “no LWW timestamp”; the resolver then falls back to **`performed_at`** (sets) or workout **`end_time` / `start_time`** (workouts); ties default to **local**.
+
+2. **Server clock for `updated_at`** — The **authoritative** `updated_at` on PostgreSQL is set only by the server (`@updatedAt` / DB clock). The client **does not** send `updated_at` on push expecting the server to adopt it; every successful upsert refreshes server `updated_at`. Pull responses include **`updated_at`** on workouts and sets so devices converge on the same LWW key.
+
+3. **Client UUIDs** — New workouts, sets, exercise definitions, and per-workout exercise rows use **UUID v4** for Watermelon `_raw.id` at creation time so ids are unique while offline and match the UUID the server stores after push.
+
 ---
 
 ## 5. Payload shapes (normative fields)
@@ -91,6 +101,7 @@ Aligns with Prisma `Workout` (composite id on server is `(id, started_at)`; wire
 - `finished_at` (number \| null, ms epoch)
 - `notes` (string \| null)
 - `routine_id` (string \| null) — optional for v1 sync
+- `updated_at` (number, ms epoch) — **pull only**; server row version for LWW (omitted on client-originated push)
 
 ### 5.2 `sets` (server: `workout_sets`)
 
@@ -102,6 +113,7 @@ Aligns with Prisma `Workout` (composite id on server is `(id, started_at)`; wire
 - `reps` (number \| null)
 - `rpe` (number \| null)
 - `performed_at` (number, ms epoch) — or server default
+- `updated_at` (number, ms epoch) — **pull only**; server row version for LWW
 
 **Mapping note:** The client stores sets under Watermelon `exercises` (group) + `sets`. When building wire `sets`, the sync layer must resolve **catalog** `exercise_id` (server) for each set—either from cached server exercise ids or from a later sync phase. This protocol **does not** add `exercises` to the envelope yet; mapping is implementation work between phases.
 
@@ -117,6 +129,7 @@ Each syncable row tracks:
 |--------|------|--------|
 | **`server_id`** | string, optional | Server UUID when known; `null` until first successful push/pull mapping. |
 | **`dirty`** | boolean, optional | `true` = local changes not yet successfully **pushed**; `false` = clean. **`null`** = legacy row before migration; treat as **needs sync** until pushed. |
+| **`updated_at`** | number, required | WatermelonDB disallows optional columns named `updated_at`. Store **`0`** until first meaningful bump; resolver treats `≤ 0` like “unknown” for LWW. |
 
 **`sets`** also persist (ms epoch / integers):
 
@@ -124,6 +137,7 @@ Each syncable row tracks:
 |--------|------|--------|
 | **`set_number`** | number, optional | Mirrors wire `set_number`; new rows set at log time (UI or next index per exercise). |
 | **`performed_at`** | number, optional | When the set was logged locally; push uses this for wire `performed_at`. Rows migrated before this column existed may be `null` until edited—first push may synthesize a timestamp. |
+| **`updated_at`** | number, required | Same as workouts: use **`0`** for unknown; on edit use device `Date.now()`; after pull use server `updated_at`. |
 
 **Rules:**
 
@@ -141,10 +155,9 @@ Each syncable row tracks:
 
 ### 6.4 Conflicts (offline-first, last-write-wins)
 
-When a row exists on both sides with divergent edits, the client uses **`syncConflictResolver`** in `frontend/src/sync/conflictResolver.ts`:
+When a row exists on both sides with divergent edits, the client uses **`syncConflictResolver`** in `frontend/src/sync/conflictResolver.ts` (see **§4.4**):
 
-- **`sets`**: the copy with the larger **`performed_at`** wins; if equal or both missing, **local** wins.
-- **`workouts`**: the copy with the larger **`end_time`** (if present, else **`start_time`**) wins; ties → **local**.
+- **`sets`** / **`workouts`**: larger **`updated_at`** wins when both sides have it; otherwise fall back to **`performed_at`** (sets) or **`end_time`** / **`start_time`** (workouts); ties → **local**.
 - **`exercises`** (join) / **`exercise_definitions`**: **remote** fields win (keeps catalog and join rows aligned with server).
 
 ---

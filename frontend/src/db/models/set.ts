@@ -20,6 +20,7 @@ export default class Set extends Model {
   @field('dirty') dirty!: boolean | null;
   @field('set_number') setNumber!: number | null;
   @field('performed_at') performedAt!: number | null;
+  @field('updated_at') updatedAt!: number;
 
   @relation('exercises', 'exercise_id') exercise!: Relation<Exercise>;
 }

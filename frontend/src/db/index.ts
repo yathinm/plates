@@ -2,9 +2,20 @@ import { NativeModules, Platform } from 'react-native';
 import Database from '@nozbe/watermelondb/Database';
 import { Q } from '@nozbe/watermelondb';
 
+import type { DirtyRaw } from '@nozbe/watermelondb/RawRecord';
+
+import { newClientUuid } from './clientUuid';
 import { migrations } from './migrations';
 import { schema } from './schema';
 import { models } from './models';
+
+const migrationSpec = migrations as { maxVersion: number; minVersion: number };
+if (__DEV__ && migrationSpec.maxVersion !== schema.version) {
+  throw new Error(
+    `[WatermelonDB] app schema is v${schema.version} but migrations only reach v${migrationSpec.maxVersion}. ` +
+      'If src/db/migrations.ts already has that migration, clear caches: `npx expo start -c` and `rm -rf node_modules/.cache`.',
+  );
+}
 import type Workout from './models/workout';
 import type Exercise from './models/exercise';
 import type SetModel from './models/set';
@@ -87,12 +98,15 @@ export const exerciseDefinitionsCollection =
 
 export async function createWorkoutAction(name: string) {
   return database.write(async () => {
+    const now = Date.now();
     const workout = await workoutsCollection.create((w) => {
+      (w._raw as DirtyRaw).id = newClientUuid();
       w.name = name;
-      w.startTime = Date.now();
+      w.startTime = now;
       w.endTime = null;
       w.status = 'active';
       w.dirty = true;
+      w.updatedAt = now;
     });
     return workout;
   });
@@ -106,6 +120,7 @@ async function findOrCreateExerciseDefinitionByNameInWrite(name: string) {
   if (existing.length > 0) return existing[0];
 
   const created = await exerciseDefinitionsCollection.create((d) => {
+    (d._raw as DirtyRaw).id = newClientUuid();
     d.name = normalized;
     d.primaryMuscle = null;
     d.equipment = null;
@@ -137,6 +152,7 @@ export async function findOrCreateExerciseForWorkoutAction(input: {
     if (existing.length > 0) return existing[0];
 
     const exercise = await exercisesCollection.create((e) => {
+      (e._raw as DirtyRaw).id = newClientUuid();
       e.workoutId = input.workoutId;
       (e._raw as any).exercise_definition_id = definition.id;
       // We keep a display label in note because schema has no `name` column on exercises
@@ -153,6 +169,7 @@ export async function addExerciseToWorkoutAction(input: {
 }) {
   return database.write(async () => {
     const exercise = await exercisesCollection.create((e) => {
+      (e._raw as DirtyRaw).id = newClientUuid();
       e.workoutId = input.workoutId;
       (e._raw as any).exercise_definition_id = input.exerciseDefinitionId;
       e.note = input.note ?? '';
@@ -180,7 +197,9 @@ export async function addSetToExerciseAction(input: {
     const setNumber =
       input.setNumber ?? (await nextSetNumberForExerciseInWrite(input.exerciseId));
     const performedAt = input.performedAt ?? Date.now();
+    const now = Date.now();
     const set = await setsCollection.create((s) => {
+      (s._raw as DirtyRaw).id = newClientUuid();
       s.exerciseId = input.exerciseId;
       s.weight = input.weight;
       s.reps = input.reps;
@@ -189,11 +208,13 @@ export async function addSetToExerciseAction(input: {
       s.setNumber = setNumber;
       s.performedAt = performedAt;
       s.dirty = true;
+      s.updatedAt = now;
     });
     const exercise = await exercisesCollection.find(input.exerciseId);
     const workout = await workoutsCollection.find(exercise.workoutId);
     await workout.update((w) => {
       w.dirty = true;
+      w.updatedAt = now;
     });
     return set;
   });
@@ -218,8 +239,10 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
     const setNumber =
       input.setNumber ?? (await nextSetNumberForExerciseInWrite(exercise.id));
     const performedAt = input.performedAt ?? Date.now();
+    const now = Date.now();
 
     const set = await setsCollection.create((s) => {
+      (s._raw as DirtyRaw).id = newClientUuid();
       s.exerciseId = exercise.id;
       s.weight = input.weight;
       s.reps = input.reps;
@@ -228,10 +251,12 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
       s.setNumber = setNumber;
       s.performedAt = performedAt;
       s.dirty = true;
+      s.updatedAt = now;
     });
     const workout = await workoutsCollection.find(input.workoutId);
     await workout.update((w) => {
       w.dirty = true;
+      w.updatedAt = now;
     });
     return set;
   });
@@ -244,6 +269,7 @@ export async function removeSetAction(setId: string) {
     const workout = await workoutsCollection.find(exercise.workoutId);
     await workout.update((w) => {
       w.dirty = true;
+      w.updatedAt = Date.now();
     });
     await set.destroyPermanently();
   });
@@ -252,10 +278,12 @@ export async function removeSetAction(setId: string) {
 export async function finishWorkoutAction(workoutId: string) {
   return database.write(async () => {
     const workout = await workoutsCollection.find(workoutId);
+    const now = Date.now();
     await workout.update((w) => {
-      w.endTime = Date.now();
+      w.endTime = now;
       w.status = 'completed';
       w.dirty = true;
+      w.updatedAt = now;
     });
     return workout;
   });
@@ -264,10 +292,12 @@ export async function finishWorkoutAction(workoutId: string) {
 export async function discardWorkoutAction(workoutId: string) {
   return database.write(async () => {
     const workout = await workoutsCollection.find(workoutId);
+    const now = Date.now();
     await workout.update((w) => {
-      w.endTime = Date.now();
+      w.endTime = now;
       w.status = 'discarded';
       w.dirty = true;
+      w.updatedAt = now;
     });
     return workout;
   });

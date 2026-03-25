@@ -51,6 +51,7 @@ export function mapPullResponseToWatermelonChanges(res: PullResponse): SyncDatab
       status: wire.finished_at != null ? 'completed' : 'active',
       server_id: wire.id,
       dirty: false,
+      updated_at: wire.updated_at != null ? Number(wire.updated_at) : 0,
     };
     workouts[bucket].push(raw);
   };
@@ -95,6 +96,7 @@ export function mapPullResponseToWatermelonChanges(res: PullResponse): SyncDatab
       performed_at: set.performed_at != null ? Number(set.performed_at) : null,
       server_id: set.id,
       dirty: false,
+      updated_at: set.updated_at != null ? Number(set.updated_at) : 0,
     };
     const bucket = setInCreated.has(set.id) ? 'created' : 'updated';
     sets[bucket].push(raw);

@@ -17,6 +17,8 @@ export type WorkoutWire = {
   started_at: number;
   finished_at?: number | null;
   notes?: string | null;
+  /** Server `updated_at` on pull; ignored on push (Prisma @updatedAt). */
+  updated_at?: number;
 };
 
 export type SetWire = {
@@ -28,6 +30,7 @@ export type SetWire = {
   reps?: number | null;
   rpe?: number | null;
   performed_at?: number;
+  updated_at?: number;
 };
 
 /** Catalog exercise (global library + user custom). */

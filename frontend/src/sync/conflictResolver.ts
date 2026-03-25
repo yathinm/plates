@@ -14,7 +14,32 @@ function mergeWinner(
   return Object.assign(resolved, local, remote);
 }
 
-function pickSetWinner(local: DirtyRaw, remote: DirtyRaw): 'local' | 'remote' {
+/** Treat missing, NaN, and `0` as “no LWW timestamp” (migration / legacy). */
+function lwwUpdatedAtMs(raw: DirtyRaw): number | null {
+  const v = raw.updated_at != null ? Number(raw.updated_at) : NaN;
+  if (!Number.isFinite(v) || v <= 0) return null;
+  return v;
+}
+
+/** Prefer server `updated_at` when both sides have it; otherwise use tie-breaker. */
+function pickByUpdatedAt(
+  local: DirtyRaw,
+  remote: DirtyRaw,
+  tieBreak: () => 'local' | 'remote',
+): 'local' | 'remote' {
+  const lu = lwwUpdatedAtMs(local);
+  const ru = lwwUpdatedAtMs(remote);
+  if (lu != null && ru != null) {
+    if (lu > ru) return 'local';
+    if (ru > lu) return 'remote';
+    return 'local';
+  }
+  if (ru != null && lu == null) return 'remote';
+  if (lu != null && ru == null) return 'local';
+  return tieBreak();
+}
+
+function pickSetWinnerFallback(local: DirtyRaw, remote: DirtyRaw): 'local' | 'remote' {
   const lp = local.performed_at != null ? Number(local.performed_at) : null;
   const rp = remote.performed_at != null ? Number(remote.performed_at) : null;
   if (lp != null && rp != null) {
@@ -33,7 +58,7 @@ function workoutAnchorMs(raw: DirtyRaw): number {
   return end ?? start;
 }
 
-function pickWorkoutWinner(local: DirtyRaw, remote: DirtyRaw): 'local' | 'remote' {
+function pickWorkoutWinnerFallback(local: DirtyRaw, remote: DirtyRaw): 'local' | 'remote' {
   const lt = workoutAnchorMs(local);
   const rt = workoutAnchorMs(remote);
   if (lt > rt) return 'local';
@@ -42,10 +67,10 @@ function pickWorkoutWinner(local: DirtyRaw, remote: DirtyRaw): 'local' | 'remote
 }
 
 /**
- * Last-write-wins when the same row was changed locally and on the server:
- * - **sets**: higher `performed_at` wins; ties → local.
- * - **workouts**: higher `end_time` (else `start_time`) wins; ties → local.
- * - **exercises** / **exercise_definitions**: remote wins (server catalog / join consistency).
+ * Last-write-wins (§4.4.4): compare **`updated_at`** when present (server time on pull;
+ * local edits bump device time). If either side lacks it (legacy row), fall back to
+ * **`performed_at`** (sets) or workout time anchor (**`end_time`** / **`start_time`**).
+ * **exercises** / **exercise_definitions**: remote wins (catalog / join consistency).
  */
 export const syncConflictResolver: SyncConflictResolver = (
   table: TableName<any>,
@@ -54,10 +79,20 @@ export const syncConflictResolver: SyncConflictResolver = (
   resolved: DirtyRaw,
 ): DirtyRaw => {
   if (table === 'sets') {
-    return mergeWinner(resolved, local, remote, pickSetWinner(local, remote));
+    return mergeWinner(
+      resolved,
+      local,
+      remote,
+      pickByUpdatedAt(local, remote, () => pickSetWinnerFallback(local, remote)),
+    );
   }
   if (table === 'workouts') {
-    return mergeWinner(resolved, local, remote, pickWorkoutWinner(local, remote));
+    return mergeWinner(
+      resolved,
+      local,
+      remote,
+      pickByUpdatedAt(local, remote, () => pickWorkoutWinnerFallback(local, remote)),
+    );
   }
   if (table === 'exercises' || table === 'exercise_definitions') {
     return Object.assign(resolved, local, remote);

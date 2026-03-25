@@ -19,6 +19,8 @@ export default class Workout extends Model {
   @field('server_id') serverId!: string | null;
   /** Local-only: true = pending push; false = clean; null = legacy / treat as pending. */
   @field('dirty') dirty!: boolean | null;
+  /** LWW clock (ms). `0` until first edit/sync; Watermelon requires non-optional `updated_at`. */
+  @field('updated_at') updatedAt!: number;
 
   @children('exercises') exercises!: Query<Exercise>;
 }

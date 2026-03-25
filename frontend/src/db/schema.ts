@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'exercise_definitions',
@@ -20,6 +20,8 @@ export const schema = appSchema({
         { name: 'status', type: 'string' },
         { name: 'server_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'dirty', type: 'boolean', isOptional: true },
+        /** LWW clock (ms). `0` = unknown/legacy; Watermelon forbids optional `updated_at`. */
+        { name: 'updated_at', type: 'number' },
       ],
     }),
     tableSchema({
@@ -42,6 +44,7 @@ export const schema = appSchema({
         { name: 'dirty', type: 'boolean', isOptional: true },
         { name: 'set_number', type: 'number', isOptional: true },
         { name: 'performed_at', type: 'number', isOptional: true },
+        { name: 'updated_at', type: 'number' },
       ],
     }),
   ],
