@@ -1,6 +1,6 @@
 import { getToken } from './auth';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3002';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 type FetchOptions = Omit<RequestInit, 'body'> & {
   body?: Record<string, unknown> | undefined;
