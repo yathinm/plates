@@ -38,12 +38,27 @@ export type SetWire = {
   performed_at?: number;
 };
 
+/** Server catalog exercise (global + optional user custom). */
+export type ExerciseWire = {
+  id: string;
+  name: string;
+  primary_muscle: string;
+  secondary_muscles: string[];
+  category: string;
+  default_rest_seconds: number;
+  is_custom: boolean;
+  created_by: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
 /**
- * Standard change envelope for both Push and Pull (table names match Watermelon).
+ * Standard change envelope for both Push and Pull (workouts / sets match Watermelon; exercises = catalog).
  */
 export type SyncChanges = {
   workouts: ChangeBucket<WorkoutWire, WorkoutWire>;
   sets: ChangeBucket<SetWire, SetWire>;
+  exercises: ChangeBucket<ExerciseWire, ExerciseWire>;
 };
 
 export type PullRequest = {
@@ -58,7 +73,8 @@ export type PullResponse = {
 
 export type PushRequest = {
   last_pulled_at: LastPulledAt;
-  changes: SyncChanges;
+  /** Push may omit empty buckets. */
+  changes: Partial<SyncChanges>;
 };
 
 export type PushResponse = {

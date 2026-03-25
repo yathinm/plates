@@ -89,6 +89,10 @@ export async function logSet(userId: string, workoutId: string, input: LogSetInp
     },
   });
 
+  await prisma.$executeRaw`
+    UPDATE workouts SET updated_at = ${now} WHERE id = ${workoutId}::uuid
+  `;
+
   const setVolume = (input.weightKg ?? 0) * (input.reps ?? 0);
 
   try {
@@ -122,7 +126,7 @@ export async function finishWorkout(userId: string, username: string, workoutId:
   const startedAt = new Date(rows[0].started_at);
 
   await prisma.$executeRaw`
-    UPDATE workouts SET finished_at = ${now}, notes = COALESCE(${notes || null}, notes)
+    UPDATE workouts SET finished_at = ${now}, notes = COALESCE(${notes || null}, notes), updated_at = ${now}
     WHERE id = ${workoutId}::uuid
   `;
 

@@ -86,6 +86,7 @@ model Exercise {
   createdBy          String?          @map("created_by") @db.Uuid
   isCustom           Boolean          @default(false) @map("is_custom")
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   creator          User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   routineExercises RoutineExercise[]
@@ -147,6 +148,7 @@ model Workout {
   startedAt  DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
   finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
   notes      String?
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   routine Routine? @relation(fields: [routineId], references: [id], onDelete: SetNull)
@@ -172,6 +174,7 @@ model WorkoutSet {
   restSec     Int?      @map("rest_sec")
   videoUrl    String?   @map("video_url")
   performedAt DateTime  @default(now()) @map("performed_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 

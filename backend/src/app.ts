@@ -7,6 +7,7 @@ import { authRoutes } from './modules/auth';
 import { exerciseRoutes } from './modules/exercises';
 import { routineRoutes } from './modules/routines';
 import { workoutRoutes } from './modules/workouts';
+import { syncRoutes } from './modules/sync';
 import { socialRoutes, registerWebSocket } from './modules/social';
 
 export async function buildApp() {
@@ -45,6 +46,7 @@ export async function buildApp() {
   app.register(exerciseRoutes, { prefix: '/exercises' });
   app.register(routineRoutes, { prefix: '/routines' });
   app.register(workoutRoutes, { prefix: '/workouts' });
+  app.register(syncRoutes, { prefix: '/sync' });
   app.register(socialRoutes, { prefix: '/social' });
 
   // ── WebSocket ──────────────────────────────────────────────

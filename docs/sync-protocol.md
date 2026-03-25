@@ -42,11 +42,13 @@ Push and pull use the **same** top-level shape so tooling and tests can be share
 ```json
 {
   "workouts": { "created": [], "updated": [], "deleted": [] },
-  "sets": { "created": [], "updated": [], "deleted": [] }
+  "sets": { "created": [], "updated": [], "deleted": [] },
+  "exercises": { "created": [], "updated": [], "deleted": [] }
 }
 ```
 
 - Keys **`workouts`** and **`sets`** match WatermelonDB table names used on the client.
+- **`exercises`** is the **catalog** (`Exercise` in PostgreSQL); not the same as Watermelon’s per-workout `exercises` join table.
 - On the server, **`sets`** maps to **`workout_sets`** (Prisma model `WorkoutSet`); the wire name stays **`sets`** for consistency with the app.
 
 ### 2.1 Semantics
@@ -132,18 +134,23 @@ Each syncable row tracks:
 
 ---
 
-## 7. HTTP sketch (non-binding)
+## 7. HTTP API (backend)
 
-| Direction | Method | Body / query |
-|-----------|--------|----------------|
-| Pull | `POST /sync/pull` or `GET /sync/pull?last_pulled_at=…` | `last_pulled_at` |
-| Push | `POST /sync/push` | `{ last_pulled_at, changes }` — server may reject stale clients |
+All routes require **`Authorization: Bearer <jwt>`**.
 
-Exact routes and auth are defined when the sync module is implemented.
+| Route | Method | Query / body |
+|-------|--------|----------------|
+| `/sync/pull` | **GET** | Query: `last_pulled_at` (optional, ms epoch). Omit or `0` for full snapshot of changed rows. |
+| `/sync/push` | **POST** | JSON: `{ "last_pulled_at": number \| null, "changes": { … } }`. Buckets may be omitted if empty. |
+
+**Pull** returns `{ "changes": SyncChanges, "timestamp": T₂ }` where rows are filtered by **`updated_at > last_pulled_at`** on `workouts`, `workout_sets`, and `exercises` (see Prisma).
+
+**Push** runs **`workouts` → `sets` → `exercises` (custom only)** inside a **single database transaction** so a failure rolls back the whole batch.
 
 ---
 
 ## 8. Reference implementation
 
 - Types: `frontend/src/sync/protocol.ts`
+- API: `backend/src/modules/sync/`
 - Dirty fields: Watermelon schema `workouts` / `sets` (`server_id`, `dirty`)
