@@ -31,9 +31,10 @@ export default function ActiveWorkoutOverlay() {
   const router = useRouter();
   const segments = useSegments();
 
-  // Hide when user is already on the Workout tab (index route = no second segment)
+  // Hide on the Workout tab (full card shown there) and when the logger modal is open
   const onWorkoutTab = segments[0] === '(tabs)' && segments.length === 1;
-  const shouldShow = isActive && workout && !onWorkoutTab;
+  const modalOpen = segments[0] === 'workout';
+  const shouldShow = isActive && workout && !onWorkoutTab && !modalOpen;
 
   const progress = useSharedValue(0);
 
@@ -61,7 +62,7 @@ export default function ActiveWorkoutOverlay() {
 
   function navigateToWorkout() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.navigate('/(tabs)');
+    router.push('/workout/active');
   }
 
   async function handleFinish() {
