@@ -3,13 +3,12 @@ import {
   View,
   Text,
   Pressable,
-  ScrollView,
   TextInput,
   Alert,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useWorkoutStore, type WorkoutSet } from '@/stores/workout';
@@ -91,9 +90,9 @@ export default function ActiveWorkoutModal() {
   }
 
   async function handleFinish() {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
       await finish();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
       Alert.alert('Error', err.message);
@@ -183,7 +182,13 @@ export default function ActiveWorkoutModal() {
         </View>
       ) : null}
 
-      <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        className="flex-1 px-5"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bottomOffset={24}
+        extraKeyboardSpace={insets.bottom + 20}
+      >
         {/* Exercise groups */}
         {exerciseGroups.map((group, gi) => (
           <View key={`${group.name}-${gi}`} className="mb-4">
@@ -318,7 +323,7 @@ export default function ActiveWorkoutModal() {
         >
           <Text className="text-danger/60 text-sm">Discard Workout</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
