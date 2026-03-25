@@ -118,11 +118,18 @@ Each syncable row tracks:
 | **`server_id`** | string, optional | Server UUID when known; `null` until first successful push/pull mapping. |
 | **`dirty`** | boolean, optional | `true` = local changes not yet successfully **pushed**; `false` = clean. **`null`** = legacy row before migration; treat as **needs sync** until pushed. |
 
+**`sets`** also persist (ms epoch / integers):
+
+| Column | Type | Meaning |
+|--------|------|--------|
+| **`set_number`** | number, optional | Mirrors wire `set_number`; new rows set at log time (UI or next index per exercise). |
+| **`performed_at`** | number, optional | When the set was logged locally; push uses this for wire `performed_at`. Rows migrated before this column existed may be `null` until edited—first push may synthesize a timestamp. |
+
 **Rules:**
 
 - On **local create** or **local update** that should eventually reach the server: set **`dirty = true`**.
 - After a **successful push** acknowledgment for that row: set **`dirty = false`** and set **`server_id`** if the server returned one.
-- **Pull** does not set `dirty` on applied server rows unless there is a conflict strategy (future).
+- **Pull** applies server rows with **`dirty = false`**; if the same record was also changed locally, Watermelon invokes a **`conflictResolver`** (see §6.4).
 
 ### 6.2 Querying pending work
 
@@ -131,6 +138,14 @@ Each syncable row tracks:
 ### 6.3 Deletions
 
 `destroyPermanently()` removes local rows and **drops** Watermelon ids. Until a **tombstone queue** or **soft delete** is implemented, long-press deletes may not produce a server **`deleted`** id. The protocol supports **`deleted`**; the app must eventually enqueue server ids for deleted sets/workouts.
+
+### 6.4 Conflicts (offline-first, last-write-wins)
+
+When a row exists on both sides with divergent edits, the client uses **`syncConflictResolver`** in `frontend/src/sync/conflictResolver.ts`:
+
+- **`sets`**: the copy with the larger **`performed_at`** wins; if equal or both missing, **local** wins.
+- **`workouts`**: the copy with the larger **`end_time`** (if present, else **`start_time`**) wins; ties → **local**.
+- **`exercises`** (join) / **`exercise_definitions`**: **remote** fields win (keeps catalog and join rows aligned with server).
 
 ---
 
@@ -152,6 +167,7 @@ All routes require **`Authorization: Bearer <jwt>`**.
 ## 8. Reference implementation
 
 - Types: `frontend/src/sync/protocol.ts`
-- Client sync: `frontend/src/sync/sync.ts` (`synchronize()` wrapper, 30s retry)
+- Client sync: `frontend/src/sync/sync.ts` (`synchronize()` + `conflictResolver`, 30s retry)
+- Conflicts: `frontend/src/sync/conflictResolver.ts`
 - API: `backend/src/modules/sync/`
-- Dirty fields: Watermelon schema `workouts` / `sets` (`server_id`, `dirty`)
+- Dirty fields: Watermelon schema `workouts` / `sets` (`server_id`, `dirty`; sets also `set_number`, `performed_at`)

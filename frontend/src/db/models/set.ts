@@ -18,6 +18,8 @@ export default class Set extends Model {
   @field('is_completed') isCompleted!: boolean;
   @field('server_id') serverId!: string | null;
   @field('dirty') dirty!: boolean | null;
+  @field('set_number') setNumber!: number | null;
+  @field('performed_at') performedAt!: number | null;
 
   @relation('exercises', 'exercise_id') exercise!: Relation<Exercise>;
 }

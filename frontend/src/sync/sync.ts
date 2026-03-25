@@ -4,6 +4,7 @@ import type { SyncPullArgs, SyncPushArgs } from '@nozbe/watermelondb/sync';
 
 import { api } from '@/utils/api';
 
+import { syncConflictResolver } from './conflictResolver';
 import { buildPushBody, mapPullResponseToWatermelonChanges } from './mappers';
 import type { PullResponse } from './protocol';
 
@@ -50,6 +51,7 @@ export async function runSynchronize(database: Database): Promise<void> {
     database,
     pullChanges: createPullChanges(),
     pushChanges: createPushChanges(database),
+    conflictResolver: syncConflictResolver,
   });
 }
 

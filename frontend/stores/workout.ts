@@ -176,6 +176,8 @@ export const useWorkoutStore = create<WorkoutState>()(
               reps: input.reps ?? 0,
               rpe: input.rpe ?? 0,
               isCompleted: input.completed,
+              setNumber: input.setNumber,
+              performedAt: Date.now(),
             });
             newSet.dbSetId = localSet.id;
           } catch {

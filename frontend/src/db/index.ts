@@ -161,20 +161,33 @@ export async function addExerciseToWorkoutAction(input: {
   });
 }
 
+async function nextSetNumberForExerciseInWrite(exerciseId: string): Promise<number> {
+  const list = await setsCollection.query(Q.where('exercise_id', exerciseId)).fetch();
+  const max = Math.max(0, ...list.map((s) => s.setNumber ?? 0));
+  return max + 1;
+}
+
 export async function addSetToExerciseAction(input: {
   exerciseId: string;
   weight: number;
   reps: number;
   rpe: number;
   isCompleted?: boolean;
+  setNumber?: number;
+  performedAt?: number;
 }) {
   return database.write(async () => {
+    const setNumber =
+      input.setNumber ?? (await nextSetNumberForExerciseInWrite(input.exerciseId));
+    const performedAt = input.performedAt ?? Date.now();
     const set = await setsCollection.create((s) => {
       s.exerciseId = input.exerciseId;
       s.weight = input.weight;
       s.reps = input.reps;
       s.rpe = input.rpe;
       s.isCompleted = input.isCompleted ?? true;
+      s.setNumber = setNumber;
+      s.performedAt = performedAt;
       s.dirty = true;
     });
     const exercise = await exercisesCollection.find(input.exerciseId);
@@ -193,6 +206,8 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
   reps: number;
   rpe: number;
   isCompleted?: boolean;
+  setNumber?: number;
+  performedAt?: number;
 }) {
   return database.write(async () => {
     const exercise = await findOrCreateExerciseForWorkoutAction({
@@ -200,12 +215,18 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
       exerciseName: input.exerciseName,
     });
 
+    const setNumber =
+      input.setNumber ?? (await nextSetNumberForExerciseInWrite(exercise.id));
+    const performedAt = input.performedAt ?? Date.now();
+
     const set = await setsCollection.create((s) => {
       s.exerciseId = exercise.id;
       s.weight = input.weight;
       s.reps = input.reps;
       s.rpe = input.rpe;
       s.isCompleted = input.isCompleted ?? true;
+      s.setNumber = setNumber;
+      s.performedAt = performedAt;
       s.dirty = true;
     });
     const workout = await workoutsCollection.find(input.workoutId);

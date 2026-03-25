@@ -21,5 +21,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 3,
+      steps: [
+        addColumns({
+          table: 'sets',
+          columns: [
+            { name: 'set_number', type: 'number', isOptional: true },
+            { name: 'performed_at', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

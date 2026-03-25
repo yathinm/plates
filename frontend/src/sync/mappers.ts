@@ -91,6 +91,8 @@ export function mapPullResponseToWatermelonChanges(res: PullResponse): SyncDatab
       reps: set.reps ?? 0,
       rpe: set.rpe ?? 0,
       is_completed: true,
+      set_number: set.set_number ?? 1,
+      performed_at: set.performed_at != null ? Number(set.performed_at) : null,
       server_id: set.id,
       dirty: false,
     };
@@ -136,15 +138,19 @@ async function setRawToWire(database: Database, raw: DirtyRaw): Promise<SetWire 
     const exercise = await database
       .get<Exercise>('exercises')
       .find(String(raw.exercise_id));
+    const setNumber =
+      raw.set_number != null ? Number(raw.set_number) : 1;
+    const performedAt =
+      raw.performed_at != null ? Number(raw.performed_at) : Date.now();
     return {
       id: String(raw.id),
       workout_id: exercise.workoutId,
       exercise_id: exercise.exerciseDefinitionId,
-      set_number: 1,
+      set_number: setNumber,
       weight_kg: raw.weight != null ? Number(raw.weight) : null,
       reps: raw.reps != null ? Number(raw.reps) : null,
       rpe: raw.rpe != null ? Number(raw.rpe) : null,
-      performed_at: Date.now(),
+      performed_at: performedAt,
     };
   } catch {
     return null;
