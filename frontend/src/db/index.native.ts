@@ -1,5 +1,6 @@
+import { Platform } from 'react-native';
 import Database from '@nozbe/watermelondb/Database';
-import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
+import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import { Q } from '@nozbe/watermelondb';
 
 import { schema } from './schema';
@@ -9,10 +10,11 @@ import type Exercise from './models/exercise';
 import type SetModel from './models/set';
 import type ExerciseDefinition from './models/exerciseDefinition';
 
-const adapter = new LokiJSAdapter({
+const adapter = new SQLiteAdapter({
   dbName: 'plates',
   schema,
-  useWebWorker: false,
+  // JSI gives near-native performance on iOS/Android dev builds
+  jsi: Platform.OS !== 'web',
   onSetUpError: (error) => {
     console.error('WatermelonDB setup failed:', error);
   },

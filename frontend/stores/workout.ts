@@ -2,11 +2,19 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/utils/api';
+import {
+  createWorkoutAction,
+  addSetToWorkoutByExerciseNameAction,
+  finishWorkoutAction,
+  discardWorkoutAction,
+  removeSetAction,
+} from '@/src/db';
 
 // ── Data types ──────────────────────────────────────────────────
 
 export interface WorkoutSet {
   localId: string;
+  dbSetId?: string;
   exerciseId: string;
   exerciseName: string;
   setNumber: number;
@@ -18,6 +26,7 @@ export interface WorkoutSet {
 }
 
 export interface ActiveWorkout {
+  localDbId: string | null;
   serverId: string | null;
   name: string;
   routineId: string | null;
@@ -85,8 +94,18 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       startWorkout: async (name = 'Workout', routineId) => {
         const now = new Date().toISOString();
+        let localDbId: string | null = null;
+
+        // Offline-first local write to WatermelonDB
+        try {
+          const localWorkout = await createWorkoutAction(name);
+          localDbId = localWorkout.id;
+        } catch {
+          // If local DB setup fails, we still keep app flow alive in Zustand
+        }
 
         const workout: ActiveWorkout = {
+          localDbId,
           serverId: null,
           name,
           routineId: routineId ?? null,
@@ -146,6 +165,24 @@ export const useWorkoutStore = create<WorkoutState>()(
           syncedAt: null,
         };
 
+        // Persist set in local WatermelonDB first (reactive source of truth)
+        const localWorkoutId = state.activeWorkout.localDbId;
+        if (localWorkoutId) {
+          try {
+            const localSet = await addSetToWorkoutByExerciseNameAction({
+              workoutId: localWorkoutId,
+              exerciseName: input.exerciseName,
+              weight: input.weightKg ?? 0,
+              reps: input.reps ?? 0,
+              rpe: input.rpe ?? 0,
+              isCompleted: input.completed,
+            });
+            newSet.dbSetId = localSet.id;
+          } catch {
+            // non-fatal, keep local Zustand row
+          }
+        }
+
         set((s) => ({
           activeWorkout: s.activeWorkout
             ? { ...s.activeWorkout, sets: [...s.activeWorkout.sets, newSet] }
@@ -185,6 +222,12 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       removeSet: (lid) => {
+        const setToRemove = get().activeWorkout?.sets.find((st) => st.localId === lid);
+        if (setToRemove?.dbSetId) {
+          removeSetAction(setToRemove.dbSetId).catch(() => {
+            // keep UI responsive even if DB delete fails
+          });
+        }
         set((s) => ({
           activeWorkout: s.activeWorkout
             ? {
@@ -207,6 +250,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         const state = get();
         if (!state.activeWorkout) throw new Error('No active workout');
 
+        // Mark local workout as completed in WatermelonDB
+        if (state.activeWorkout.localDbId) {
+          await finishWorkoutAction(state.activeWorkout.localDbId).catch(() => {});
+        }
+
         const serverId = state.activeWorkout.serverId;
         if (!serverId) throw new Error('Workout not synced to server');
 
@@ -228,6 +276,10 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       discardWorkout: () => {
+        const localDbId = get().activeWorkout?.localDbId;
+        if (localDbId) {
+          discardWorkoutAction(localDbId).catch(() => {});
+        }
         set({
           isActive: false,
           isPaused: false,

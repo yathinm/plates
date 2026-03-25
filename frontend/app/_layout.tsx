@@ -8,12 +8,14 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
+import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { gym, brand } from '@/constants/Colors';
 import { useAuth } from '@/stores/auth';
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 import ActiveWorkoutOverlay from '@/components/ActiveWorkoutOverlay';
+import { database } from '@/src/db';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -101,27 +103,29 @@ function RootLayoutNav() {
   }, [token, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? PlatesDark : PlatesLight}>
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="workout"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-              gestureEnabled: true,
-              gestureDirection: 'vertical',
-            }}
-          />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
-        </Stack>
+    <DatabaseProvider database={database}>
+      <ThemeProvider value={colorScheme === 'dark' ? PlatesDark : PlatesLight}>
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="workout"
+              options={{
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+                gestureEnabled: true,
+                gestureDirection: 'vertical',
+              }}
+            />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
+          </Stack>
 
-        {/* Mini-player overlay — visible on all tabs except Workout when a session is active */}
-        {token && <ActiveWorkoutOverlay />}
-      </View>
-      <StatusBar style="light" />
-    </ThemeProvider>
+          {/* Mini-player overlay — visible on all tabs except Workout when a session is active */}
+          {token && <ActiveWorkoutOverlay />}
+        </View>
+        <StatusBar style="light" />
+      </ThemeProvider>
+    </DatabaseProvider>
   );
 }

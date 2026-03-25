@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useWorkoutStore, type WorkoutSet } from '@/stores/workout';
+import WorkoutSummary from '@/components/WorkoutSummary';
 
 function formatTime(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -175,6 +176,12 @@ export default function ActiveWorkoutModal() {
           <Text className="text-zinc-100 text-xl font-bold">{exerciseGroups.length}</Text>
         </View>
       </View>
+
+      {workout.localDbId ? (
+        <View className="px-5 mb-3">
+          <WorkoutSummary workoutId={workout.localDbId} />
+        </View>
+      ) : null}
 
       <ScrollView className="flex-1 px-5" keyboardShouldPersistTaps="handled">
         {/* Exercise groups */}
