@@ -12,6 +12,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { gym, brand } from '@/constants/Colors';
 import { useAuth } from '@/stores/auth';
+import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
+import ActiveWorkoutOverlay from '@/components/ActiveWorkoutOverlay';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -58,12 +60,10 @@ export default function RootLayout() {
     if (fontError) throw fontError;
   }, [fontError]);
 
-  // Hydrate auth state from SecureStore on mount
   useEffect(() => {
     hydrate();
   }, []);
 
-  // Hide splash once both fonts AND auth hydration are done
   useEffect(() => {
     if (fontsLoaded && !isLoading) {
       SplashScreen.hideAsync();
@@ -87,25 +87,31 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  // Single timer instance for the entire app — ticks the workout store every second
+  useWorkoutTimer();
+
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!token && !inAuthGroup) {
-      // Not signed in and not on an auth screen → redirect to login
       router.replace('/(auth)/login');
     } else if (token && inAuthGroup) {
-      // Signed in but still on auth screen → redirect to tabs
       router.replace('/(tabs)');
     }
   }, [token, segments]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? PlatesDark : PlatesLight}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
+        </Stack>
+
+        {/* Mini-player overlay — visible on all tabs except Workout when a session is active */}
+        {token && <ActiveWorkoutOverlay />}
+      </View>
       <StatusBar style="light" />
     </ThemeProvider>
   );

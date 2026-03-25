@@ -1,6 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
 import { useWorkoutStore } from '@/stores/workout';
-import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 
 function formatTime(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -21,8 +20,6 @@ export default function WorkoutScreen() {
   const resume = useWorkoutStore((s) => s.resumeWorkout);
   const finish = useWorkoutStore((s) => s.finishWorkout);
   const discard = useWorkoutStore((s) => s.discardWorkout);
-
-  useWorkoutTimer();
 
   if (isActive && workout) {
     return <ActiveView
