@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -43,8 +43,24 @@ export default function ActiveWorkoutModal() {
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
 
-  if (!workout) {
-    router.back();
+  const [workoutStoreHydrated, setWorkoutStoreHydrated] = useState(() =>
+    useWorkoutStore.persist.hasHydrated(),
+  );
+
+  useEffect(() => {
+    const unsub = useWorkoutStore.persist.onFinishHydration(() =>
+      setWorkoutStoreHydrated(true),
+    );
+    if (useWorkoutStore.persist.hasHydrated()) setWorkoutStoreHydrated(true);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!workoutStoreHydrated) return;
+    if (!workout) router.back();
+  }, [workoutStoreHydrated, workout, router]);
+
+  if (!workoutStoreHydrated || !workout) {
     return null;
   }
 
