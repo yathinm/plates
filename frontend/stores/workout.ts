@@ -8,6 +8,7 @@ import {
   finishWorkoutAction,
   discardWorkoutAction,
   removeSetAction,
+  updateWorkoutNameAction,
 } from '@/src/db';
 
 // ── Data types ──────────────────────────────────────────────────
@@ -52,6 +53,8 @@ interface WorkoutState {
   addSet: (set: Omit<WorkoutSet, 'localId' | 'syncedAt'>) => Promise<void>;
   removeSet: (localId: string) => void;
   updateNotes: (notes: string) => void;
+  /** Session title; persists to WatermelonDB on a short debounce. */
+  updateWorkoutName: (name: string) => void;
   finishWorkout: (notes?: string) => Promise<FinishResult>;
   discardWorkout: () => void;
 
@@ -78,6 +81,8 @@ function computeElapsed(startedAt: string, totalPausedMs: number, pausedAt: numb
   const paused = pausedAt ? now - pausedAt : 0;
   return Math.max(0, Math.floor((base - paused) / 1000));
 }
+
+let workoutNamePersistTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── Store ───────────────────────────────────────────────────────
 
@@ -245,12 +250,51 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
       },
 
+      updateWorkoutName: (name) => {
+        set((s) => ({
+          activeWorkout: s.activeWorkout ? { ...s.activeWorkout, name } : null,
+        }));
+        const id = get().activeWorkout?.localDbId;
+        if (!id) return;
+        if (workoutNamePersistTimer) clearTimeout(workoutNamePersistTimer);
+        workoutNamePersistTimer = setTimeout(() => {
+          workoutNamePersistTimer = null;
+          const aw = get().activeWorkout;
+          if (!aw?.localDbId) return;
+          const final = (aw.name ?? '').trim() || 'Workout';
+          if (final !== aw.name) {
+            set((s) => ({
+              activeWorkout: s.activeWorkout
+                ? { ...s.activeWorkout, name: final }
+                : null,
+            }));
+          }
+          updateWorkoutNameAction(aw.localDbId, final).catch(() => {});
+        }, 400);
+      },
+
       finishWorkout: async (notes) => {
+        if (workoutNamePersistTimer) {
+          clearTimeout(workoutNamePersistTimer);
+          workoutNamePersistTimer = null;
+        }
         const state = get();
         if (!state.activeWorkout) throw new Error('No active workout');
 
         // Mark local workout as completed in WatermelonDB
         if (state.activeWorkout.localDbId) {
+          const finalName =
+            (state.activeWorkout.name ?? '').trim() || 'Workout';
+          if (finalName !== state.activeWorkout.name) {
+            set((s) => ({
+              activeWorkout: s.activeWorkout
+                ? { ...s.activeWorkout, name: finalName }
+                : null,
+            }));
+          }
+          await updateWorkoutNameAction(state.activeWorkout.localDbId, finalName).catch(
+            () => {},
+          );
           await finishWorkoutAction(state.activeWorkout.localDbId).catch(() => {});
         }
 
@@ -275,6 +319,10 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       discardWorkout: () => {
+        if (workoutNamePersistTimer) {
+          clearTimeout(workoutNamePersistTimer);
+          workoutNamePersistTimer = null;
+        }
         const localDbId = get().activeWorkout?.localDbId;
         if (localDbId) {
           discardWorkoutAction(localDbId).catch(() => {});

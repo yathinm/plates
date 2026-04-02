@@ -37,6 +37,7 @@ export default function ActiveWorkoutModal() {
   const finish = useWorkoutStore((s) => s.finishWorkout);
   const discard = useWorkoutStore((s) => s.discardWorkout);
   const updateNotes = useWorkoutStore((s) => s.updateNotes);
+  const updateWorkoutName = useWorkoutStore((s) => s.updateWorkoutName);
 
   // Quick-add set form state
   const [exerciseName, setExerciseName] = useState('');
@@ -162,9 +163,21 @@ export default function ActiveWorkoutModal() {
         </Pressable>
       </View>
 
-      {/* Workout title */}
+      {/* Workout title — editable */}
       <View className="px-5 mb-2">
-        <Text className="text-2xl font-bold text-zinc-100">{workout.name}</Text>
+        <Text className="text-gym-muted text-xs uppercase tracking-widest mb-1">
+          Session name
+        </Text>
+        <TextInput
+          className="text-2xl font-bold text-zinc-100 py-1 min-h-[2.5rem]"
+          value={workout.name}
+          onChangeText={updateWorkoutName}
+          placeholder="Workout"
+          placeholderTextColor="#71717A"
+          autoCapitalize="sentences"
+          returnKeyType="done"
+          maxLength={80}
+        />
         {isPaused && (
           <Text className="text-warning text-xs font-semibold mt-1">PAUSED</Text>
         )}

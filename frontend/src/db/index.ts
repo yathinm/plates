@@ -112,6 +112,20 @@ export async function createWorkoutAction(name: string) {
   });
 }
 
+export async function updateWorkoutNameAction(workoutId: string, name: string) {
+  const trimmed = name.trim() || 'Workout';
+  return database.write(async () => {
+    const workout = await workoutsCollection.find(workoutId);
+    const now = Date.now();
+    await workout.update((w) => {
+      w.name = trimmed;
+      w.dirty = true;
+      w.updatedAt = now;
+    });
+    return workout;
+  });
+}
+
 async function findOrCreateExerciseDefinitionByNameInWrite(name: string) {
   const normalized = name.trim();
   const existing = await exerciseDefinitionsCollection
