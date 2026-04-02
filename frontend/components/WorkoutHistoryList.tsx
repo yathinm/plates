@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
+import { View, Text, FlatList, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import withObservables from '@nozbe/with-observables';
 import { withDatabase } from '@nozbe/watermelondb/DatabaseProvider';
 import { Q } from '@nozbe/watermelondb';
@@ -40,6 +41,8 @@ function formatDurationMs(start: number, end: number | null): string {
 }
 
 function WorkoutHistoryListBase({ workouts }: Props) {
+  const router = useRouter();
+
   if (workouts.length === 0) {
     return (
       <View className="mx-5 bg-gym-dark rounded-xl p-6 border border-gym-border items-center">
@@ -57,7 +60,10 @@ function WorkoutHistoryListBase({ workouts }: Props) {
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
       renderItem={({ item: w }) => (
-        <View className="bg-gym-dark rounded-xl p-4 border border-gym-border mb-3">
+        <Pressable
+          onPress={() => router.push(`/workout/${w.id}`)}
+          className="bg-gym-dark rounded-xl p-4 border border-gym-border mb-3 active:opacity-80"
+        >
           <Text className="text-zinc-100 text-base font-semibold" numberOfLines={1}>
             {w.name}
           </Text>
@@ -65,7 +71,7 @@ function WorkoutHistoryListBase({ workouts }: Props) {
             {formatFinishedAt(w.endTime)}
             {w.endTime != null ? ` · ${formatDurationMs(w.startTime, w.endTime)}` : ''}
           </Text>
-        </View>
+        </Pressable>
       )}
     />
   );

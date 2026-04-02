@@ -10,6 +10,7 @@ export default function WorkoutModalLayout() {
       }}
     >
       <Stack.Screen name="active" />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }
