@@ -20,7 +20,6 @@ export interface WorkoutSet {
   setNumber: number;
   weightKg: number | null;
   reps: number | null;
-  rpe: number | null;
   completed: boolean;
   syncedAt: string | null;
 }
@@ -174,7 +173,6 @@ export const useWorkoutStore = create<WorkoutState>()(
               exerciseName: input.exerciseName,
               weight: input.weightKg ?? 0,
               reps: input.reps ?? 0,
-              rpe: input.rpe ?? 0,
               isCompleted: input.completed,
               setNumber: input.setNumber,
               performedAt: Date.now(),
@@ -202,7 +200,6 @@ export const useWorkoutStore = create<WorkoutState>()(
                 setNumber: input.setNumber,
                 weightKg: input.weightKg,
                 reps: input.reps,
-                rpe: input.rpe,
               },
             });
             set((s) => ({

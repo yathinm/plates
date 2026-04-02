@@ -134,32 +134,36 @@ export async function findOrCreateExerciseDefinitionByNameAction(name: string) {
   });
 }
 
+/** Call only from inside an existing `database.write` — never nest `database.write`. */
+async function findOrCreateExerciseForWorkoutInWrite(input: {
+  workoutId: string;
+  exerciseName: string;
+}): Promise<Exercise> {
+  const definition = await findOrCreateExerciseDefinitionByNameInWrite(
+    input.exerciseName,
+  );
+
+  const existing = await exercisesCollection
+    .query(
+      Q.where('workout_id', input.workoutId),
+      Q.where('exercise_definition_id', definition.id),
+    )
+    .fetch();
+  if (existing.length > 0) return existing[0];
+
+  return exercisesCollection.create((e) => {
+    (e._raw as DirtyRaw).id = newClientUuid();
+    e.workoutId = input.workoutId;
+    (e._raw as any).exercise_definition_id = definition.id;
+    e.note = input.exerciseName;
+  });
+}
+
 export async function findOrCreateExerciseForWorkoutAction(input: {
   workoutId: string;
   exerciseName: string;
 }) {
-  return database.write(async () => {
-    const definition = await findOrCreateExerciseDefinitionByNameInWrite(
-      input.exerciseName,
-    );
-
-    const existing = await exercisesCollection
-      .query(
-        Q.where('workout_id', input.workoutId),
-        Q.where('exercise_definition_id', definition.id),
-      )
-      .fetch();
-    if (existing.length > 0) return existing[0];
-
-    const exercise = await exercisesCollection.create((e) => {
-      (e._raw as DirtyRaw).id = newClientUuid();
-      e.workoutId = input.workoutId;
-      (e._raw as any).exercise_definition_id = definition.id;
-      // We keep a display label in note because schema has no `name` column on exercises
-      e.note = input.exerciseName;
-    });
-    return exercise;
-  });
+  return database.write(async () => findOrCreateExerciseForWorkoutInWrite(input));
 }
 
 export async function addExerciseToWorkoutAction(input: {
@@ -188,7 +192,7 @@ export async function addSetToExerciseAction(input: {
   exerciseId: string;
   weight: number;
   reps: number;
-  rpe: number;
+  rpe?: number;
   isCompleted?: boolean;
   setNumber?: number;
   performedAt?: number;
@@ -203,7 +207,7 @@ export async function addSetToExerciseAction(input: {
       s.exerciseId = input.exerciseId;
       s.weight = input.weight;
       s.reps = input.reps;
-      s.rpe = input.rpe;
+      s.rpe = input.rpe ?? 0;
       s.isCompleted = input.isCompleted ?? true;
       s.setNumber = setNumber;
       s.performedAt = performedAt;
@@ -225,13 +229,13 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
   exerciseName: string;
   weight: number;
   reps: number;
-  rpe: number;
+  rpe?: number;
   isCompleted?: boolean;
   setNumber?: number;
   performedAt?: number;
 }) {
   return database.write(async () => {
-    const exercise = await findOrCreateExerciseForWorkoutAction({
+    const exercise = await findOrCreateExerciseForWorkoutInWrite({
       workoutId: input.workoutId,
       exerciseName: input.exerciseName,
     });
@@ -246,7 +250,7 @@ export async function addSetToWorkoutByExerciseNameAction(input: {
       s.exerciseId = exercise.id;
       s.weight = input.weight;
       s.reps = input.reps;
-      s.rpe = input.rpe;
+      s.rpe = input.rpe ?? 0;
       s.isCompleted = input.isCompleted ?? true;
       s.setNumber = setNumber;
       s.performedAt = performedAt;

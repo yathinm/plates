@@ -19,7 +19,7 @@ module.exports = {
           border:    '#27272F', // Subtle dividers
         },
         success:     '#22C55E', // PR banners, positive delta
-        warning:     '#F59E0B', // RPE 9–10, caution states
+        warning:     '#F59E0B', // caution states
         danger:      '#EF4444', // Destructive actions, errors
         hype:        '#A855F7', // Social hype pulse
       },

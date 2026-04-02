@@ -42,7 +42,6 @@ export default function ActiveWorkoutModal() {
   const [exerciseName, setExerciseName] = useState('');
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
-  const [rpe, setRpe] = useState('');
 
   if (!workout) {
     router.back();
@@ -80,13 +79,11 @@ export default function ActiveWorkoutModal() {
       setNumber: setsForExercise + 1,
       weightKg: weight ? parseFloat(weight) : null,
       reps: reps ? parseInt(reps, 10) : null,
-      rpe: rpe ? parseFloat(rpe) : null,
       completed: true,
     });
 
     setWeight('');
     setReps('');
-    setRpe('');
   }
 
   async function handleFinish() {
@@ -201,7 +198,6 @@ export default function ActiveWorkoutModal() {
                 <Text className="text-gym-muted text-xs w-10">SET</Text>
                 <Text className="text-gym-muted text-xs flex-1 text-center">KG</Text>
                 <Text className="text-gym-muted text-xs flex-1 text-center">REPS</Text>
-                <Text className="text-gym-muted text-xs w-12 text-center">RPE</Text>
                 <Text className="text-gym-muted text-xs w-8 text-right">✓</Text>
               </View>
               {group.sets.map((s) => (
@@ -219,9 +215,6 @@ export default function ActiveWorkoutModal() {
                   </Text>
                   <Text className="text-zinc-100 text-sm flex-1 text-center font-mono">
                     {s.reps ?? '—'}
-                  </Text>
-                  <Text className="text-zinc-400 text-sm w-12 text-center">
-                    {s.rpe ?? '—'}
                   </Text>
                   <View className="w-8 items-end">
                     {s.syncedAt ? (
@@ -268,20 +261,12 @@ export default function ActiveWorkoutModal() {
               onChangeText={setWeight}
             />
             <TextInput
-              className="flex-1 bg-gym-dark border border-gym-border rounded-lg px-3 py-2.5 text-zinc-100 text-sm mx-1 text-center"
+              className="flex-1 bg-gym-dark border border-gym-border rounded-lg px-3 py-2.5 text-zinc-100 text-sm ml-2 text-center"
               placeholder="reps"
               placeholderTextColor="#71717A"
               keyboardType="number-pad"
               value={reps}
               onChangeText={setReps}
-            />
-            <TextInput
-              className="flex-1 bg-gym-dark border border-gym-border rounded-lg px-3 py-2.5 text-zinc-100 text-sm ml-2 text-center"
-              placeholder="RPE"
-              placeholderTextColor="#71717A"
-              keyboardType="decimal-pad"
-              value={rpe}
-              onChangeText={setRpe}
             />
           </View>
           <Pressable
