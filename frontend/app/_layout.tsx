@@ -13,7 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { gym, brand } from '@/constants/Colors';
+import { brand } from '@/constants/Colors';
 import { useAuth } from '@/stores/auth';
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer';
 import ActiveWorkoutOverlay from '@/components/ActiveWorkoutOverlay';
@@ -30,15 +30,15 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 const PlatesDark = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
-    primary:      brand.electric,
-    background:   gym.black,
-    card:         gym.dark,
-    text:         '#F4F4F5',
-    border:       gym.border,
-    notification: brand.electric,
+    ...DefaultTheme.colors,
+    primary: brand.black,
+    background: brand.white,
+    card: brand.white,
+    text: brand.ink,
+    border: brand.gray200,
+    notification: brand.success,
   },
 };
 
@@ -46,11 +46,11 @@ const PlatesLight = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary:    brand.electric,
-    background: '#F4F4F5',
-    card:       '#FFFFFF',
-    text:       '#0A0A0F',
-    border:     '#E4E4E7',
+    primary: brand.black,
+    background: brand.white,
+    card: brand.white,
+    text: brand.ink,
+    border: brand.gray200,
   },
 };
 
@@ -78,8 +78,8 @@ export default function RootLayout() {
 
   if (!fontsLoaded || isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: gym.black, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color={brand.electric} />
+      <View style={{ flex: 1, backgroundColor: brand.white, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={brand.black} />
       </View>
     );
   }
@@ -132,7 +132,7 @@ function RootLayoutNav() {
             {token && <ActiveWorkoutOverlay />}
             <PlatesToast />
           </View>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </ThemeProvider>
       </KeyboardProvider>
     </DatabaseProvider>

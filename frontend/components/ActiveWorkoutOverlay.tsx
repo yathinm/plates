@@ -1,18 +1,15 @@
 import { Pressable, Text, View } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { usePathname, useRouter, useSegments } from 'expo-router';
 import Animated, {
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
   interpolate,
+  useAnimatedStyle,
   useSharedValue,
-  runOnJS,
+  withSpring,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 
 import { useWorkoutStore } from '@/stores/workout';
-import { brand, gym } from '@/constants/Colors';
 import { TAB_BAR_HEIGHT, OVERLAY_HEIGHT } from '@/constants/Layout';
 
 function formatCompact(totalSeconds: number): string {
@@ -30,10 +27,13 @@ export default function ActiveWorkoutOverlay() {
 
   const router = useRouter();
   const segments = useSegments();
+  const pathname = usePathname();
 
-  // Hide on the Workout tab (full card shown there) and when the logger modal is open
   const onWorkoutTab = segments[0] === '(tabs)' && segments.length === 1;
-  const modalOpen = segments[0] === 'workout';
+  const modalOpen =
+    segments[0] === 'workout' ||
+    pathname.includes('/workout/') ||
+    pathname.endsWith('/active');
   const shouldShow = isActive && workout && !onWorkoutTab && !modalOpen;
 
   const progress = useSharedValue(0);
@@ -44,7 +44,7 @@ export default function ActiveWorkoutOverlay() {
       stiffness: 200,
       mass: 0.8,
     });
-  }, [shouldShow]);
+  }, [shouldShow, progress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -70,7 +70,7 @@ export default function ActiveWorkoutOverlay() {
     try {
       await finishWorkout();
     } catch {
-      // handled by the full workout screen
+      // The full workout screen handles finish failures.
     }
   }
 
@@ -90,49 +90,38 @@ export default function ActiveWorkoutOverlay() {
     >
       <Pressable
         onPress={navigateToWorkout}
-        className="flex-1 mx-3 rounded-2xl flex-row items-center px-4 overflow-hidden"
+        className="flex-1 mx-3 rounded-2xl flex-row items-center px-4 overflow-hidden bg-uber-white border border-uber-gray200"
         style={{
-          backgroundColor: gym.slate,
-          borderWidth: 1,
-          borderColor: gym.border,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.1,
+          shadowRadius: 18,
           elevation: 10,
         }}
       >
-        {/* Pulsing dot */}
-        <View
-          className="w-2.5 h-2.5 rounded-full mr-3"
-          style={{ backgroundColor: isPaused ? '#F59E0B' : '#22C55E' }}
-        />
+        <View className={`w-2.5 h-2.5 rounded-full mr-3 ${isPaused ? 'bg-warning' : 'bg-uber-success'}`} />
 
-        {/* Info */}
         <View className="flex-1 mr-3">
-          <Text className="text-zinc-100 text-sm font-semibold" numberOfLines={1}>
+          <Text className="text-uber-black text-sm font-semibold" numberOfLines={1}>
             {workout.name}
           </Text>
-          <Text className="text-zinc-400 text-xs" numberOfLines={1}>
+          <Text className="text-uber-gray700 text-xs" numberOfLines={1}>
             {currentExercise} · {setCount} {setCount === 1 ? 'set' : 'sets'}
           </Text>
         </View>
 
-        {/* Timer */}
-        <Text
-          className="font-mono text-base mr-4"
-          style={{ color: isPaused ? '#F59E0B' : '#F4F4F5' }}
-        >
+        <Text className="font-mono text-uber-black text-base mr-4">
           {formatCompact(elapsed)}
         </Text>
 
-        {/* Finish button */}
         <Pressable
           onPress={handleFinish}
-          className="bg-success/20 border border-success/40 rounded-xl px-4 py-2 active:opacity-80"
+          className="bg-uber-successSoft border border-uber-success/20 rounded-[10px] px-4 py-2 active:opacity-80"
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel="Finish workout"
         >
-          <Text className="text-success text-xs font-bold">FINISH</Text>
+          <Text className="text-uber-success text-xs font-bold">FINISH</Text>
         </Pressable>
       </Pressable>
     </Animated.View>

@@ -1,6 +1,8 @@
-import { View, Text, Pressable } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+
+import { MetricTile, PageHeader, Panel, PrimaryButton, ResponsiveContent, Screen, SecondaryButton, SectionLabel } from '@/components/ui';
 import { useWorkoutStore } from '@/stores/workout';
 
 function formatTime(totalSeconds: number): string {
@@ -11,6 +13,10 @@ function formatTime(totalSeconds: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
+function totalVolume(sets: { weightKg: number | null; reps: number | null }[]) {
+  return sets.reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.reps ?? 0), 0);
+}
+
 export default function WorkoutScreen() {
   const isActive = useWorkoutStore((s) => s.isActive);
   const isPaused = useWorkoutStore((s) => s.isPaused);
@@ -18,102 +24,108 @@ export default function WorkoutScreen() {
   const elapsed = useWorkoutStore((s) => s.elapsedSeconds);
   const start = useWorkoutStore((s) => s.startWorkout);
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWide = width >= 900;
 
   function openLogger() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/workout/active');
   }
 
+  async function startEmpty() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await start('Strength Session');
+    router.push('/workout/active');
+  }
+
+  const sets = workout?.sets ?? [];
+  const volume = Math.round(totalVolume(sets));
+  const lastSet = sets[sets.length - 1];
+
   return (
-    <View className="flex-1 bg-gym-black px-5 pt-14">
-      <Text className="text-3xl font-bold text-zinc-100 mb-2">Plates</Text>
-      <Text className="text-gym-muted text-base mb-10">
-        {isActive ? 'You have an active session.' : 'Ready to lift? Start a new session or pick a routine.'}
-      </Text>
+    <Screen>
+      <ResponsiveContent className="flex-1" maxWidth={1120}>
+        <PageHeader
+          eyebrow="Workout"
+          title="Start with the next set."
+          subtitle={isActive ? 'You have a live training session. Continue logging without losing momentum.' : 'Launch a session, keep the form simple, and capture every useful rep.'}
+        />
 
-      {/* Active workout card */}
-      {isActive && workout ? (
-        <Pressable
-          onPress={openLogger}
-          className="bg-gym-dark rounded-2xl border border-gym-border p-5 mb-6 active:opacity-90"
-          style={{
-            shadowColor: '#2563EB',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.15,
-            shadowRadius: 20,
-            elevation: 4,
-          }}
-        >
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              <View
-                className="w-2.5 h-2.5 rounded-full mr-2.5"
-                style={{ backgroundColor: isPaused ? '#F59E0B' : '#22C55E' }}
-              />
-              <Text className="text-zinc-100 text-lg font-bold">{workout.name}</Text>
+        <View className={isWide ? 'flex-row gap-5' : ''}>
+          <Panel className={isWide ? 'flex-1 p-5' : 'p-5 mb-5'}>
+            <View className="flex-row items-center justify-between mb-6">
+              <View>
+                <SectionLabel>{isActive ? 'Live session' : 'Quick start'}</SectionLabel>
+                <Text className="text-uber-black text-2xl font-semibold">
+                  {isActive && workout ? workout.name : 'Empty workout'}
+                </Text>
+              </View>
+              {isActive ? (
+                <View className="bg-uber-successSoft rounded-full px-3 py-1">
+                  <Text className="text-uber-success text-xs font-semibold">
+                    {isPaused ? 'Paused' : 'Active'}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            <Text
-              className="font-mono text-lg"
-              style={{ color: isPaused ? '#F59E0B' : '#F4F4F5' }}
-            >
-              {formatTime(elapsed)}
-            </Text>
-          </View>
 
-          {/* Mini stats */}
-          <View className="flex-row mb-4">
-            <View className="flex-1">
-              <Text className="text-gym-muted text-xs">Sets</Text>
-              <Text className="text-zinc-200 text-base font-semibold">{workout.sets.length}</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-gym-muted text-xs">Volume</Text>
-              <Text className="text-zinc-200 text-base font-semibold">
-                {workout.sets.reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.reps ?? 0), 0) > 0
-                  ? `${Math.round(workout.sets.reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.reps ?? 0), 0))} kg`
-                  : '—'}
+            {isActive && workout ? (
+              <>
+                <View className="bg-uber-black rounded-2xl px-5 py-5 mb-5">
+                  <Text className="text-uber-white/70 text-xs font-semibold uppercase tracking-widest mb-1">
+                    Elapsed
+                  </Text>
+                  <Text className="text-uber-white font-mono text-5xl">{formatTime(elapsed)}</Text>
+                </View>
+                <View className="flex-row gap-3 mb-5">
+                  <MetricTile label="Sets" value={sets.length} />
+                  <MetricTile label="Volume" value={volume > 0 ? volume : '—'} suffix={volume > 0 ? 'kg' : undefined} />
+                  <MetricTile label="Last" value={lastSet?.exerciseName ?? '—'} />
+                </View>
+                <PrimaryButton onPress={openLogger}>Continue workout</PrimaryButton>
+              </>
+            ) : (
+              <>
+                <Text className="text-uber-gray700 text-base leading-6 mb-5">
+                  No templates required. Start clean, add exercises as you lift, and keep the flow moving.
+                </Text>
+                <PrimaryButton className="mb-3" onPress={startEmpty}>
+                  Start empty workout
+                </PrimaryButton>
+                <SecondaryButton disabled>Choose a routine</SecondaryButton>
+              </>
+            )}
+          </Panel>
+
+          <View className={isWide ? 'w-[360px]' : ''}>
+            <Panel className="p-5 mb-5">
+              <SectionLabel>Today</SectionLabel>
+              <Text className="text-uber-black text-xl font-semibold mb-4">Session checklist</Text>
+              {['Warm up deliberately', 'Log working sets only', 'Finish with notes'].map((item, index) => (
+                <View key={item} className="flex-row items-center py-3 border-t border-uber-gray200">
+                  <View className="w-7 h-7 rounded-full bg-uber-gray050 border border-uber-gray200 items-center justify-center mr-3">
+                    <Text className="text-uber-black text-xs font-semibold">{index + 1}</Text>
+                  </View>
+                  <Text className="text-uber-ink text-sm flex-1">{item}</Text>
+                </View>
+              ))}
+            </Panel>
+
+            <Panel className="p-5">
+              <SectionLabel>Recent sessions</SectionLabel>
+              <Text className="text-uber-gray700 text-sm leading-5">
+                Completed workouts will appear here with duration, volume, and set counts.
               </Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-gym-muted text-xs">Last</Text>
-              <Text className="text-zinc-200 text-base font-semibold" numberOfLines={1}>
-                {workout.sets.length > 0
-                  ? workout.sets[workout.sets.length - 1].exerciseName
-                  : '—'}
-              </Text>
-            </View>
+              <Pressable
+                onPress={() => router.push('/history')}
+                className="mt-4 bg-uber-gray050 rounded-[10px] border border-uber-gray200 px-4 py-3 active:opacity-80"
+              >
+                <Text className="text-uber-black text-sm font-semibold">Open history</Text>
+              </Pressable>
+            </Panel>
           </View>
-
-          <View className="bg-brand-electric rounded-xl py-3 items-center">
-            <Text className="text-white font-semibold">Continue Workout</Text>
-          </View>
-        </Pressable>
-      ) : (
-        <>
-          <Pressable
-            className="bg-brand-electric rounded-2xl py-4 px-6 items-center mb-4 active:opacity-80"
-            onPress={() => start()}
-          >
-            <Text className="text-white text-lg font-semibold">Start Empty Workout</Text>
-          </Pressable>
-
-          <Pressable className="bg-gym-slate rounded-2xl py-4 px-6 items-center border border-gym-border active:opacity-80">
-            <Text className="text-zinc-300 text-lg font-semibold">Choose a Routine</Text>
-          </Pressable>
-        </>
-      )}
-
-      {/* Recent sessions */}
-      <View className="mt-10">
-        <Text className="text-zinc-400 text-xs uppercase tracking-widest mb-3">
-          Recent Sessions
-        </Text>
-        <View className="bg-gym-dark rounded-xl p-4 border border-gym-border">
-          <Text className="text-gym-muted text-sm text-center">
-            No workouts yet — hit the button above!
-          </Text>
         </View>
-      </View>
-    </View>
+      </ResponsiveContent>
+    </Screen>
   );
 }

@@ -6,25 +6,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        uber: {
+          black: '#000000',
+          white: '#FFFFFF',
+          gray050: '#F6F6F6',
+          gray200: '#E2E2E2',
+          gray700: '#545454',
+          ink: '#111111',
+          success: '#0A7F5A',
+          successSoft: '#E8F5EF',
+          warning: '#A85F00',
+        },
         brand: {
-          electric:  '#2563EB', // Primary action, links, active tabs
-          sky:       '#38BDF8', // Secondary highlights
-          deep:      '#1E3A5F', // Dark accent for headers
+          electric:  '#000000',
+          sky:       '#545454',
+          deep:      '#111111',
         },
         gym: {
-          black:     '#0A0A0F', // Deepest background
-          dark:      '#141419', // Card / surface background
-          slate:     '#1E1E26', // Elevated surface
-          muted:     '#71717A', // Placeholder text, disabled states
-          border:    '#27272F', // Subtle dividers
+          black:     '#FFFFFF',
+          dark:      '#FFFFFF',
+          slate:     '#F6F6F6',
+          muted:     '#545454',
+          border:    '#E2E2E2',
         },
-        success:     '#22C55E', // PR banners, positive delta
-        warning:     '#F59E0B', // caution states
-        danger:      '#EF4444', // Destructive actions, errors
-        hype:        '#A855F7', // Social hype pulse
+        success:     '#0A7F5A',
+        warning:     '#A85F00',
+        danger:      '#B42318',
+        hype:        '#111111',
       },
       fontFamily: {
-        mono: ['SpaceMono'],
+        display: ['Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['Helvetica Neue', 'Arial', 'sans-serif'],
+        mono: ['SpaceMono', 'SF Mono', 'Menlo', 'monospace'],
       },
     },
   },

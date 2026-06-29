@@ -1,42 +1,52 @@
 export const brand = {
-  electric:  '#2563EB',
-  sky:       '#38BDF8',
-  deep:      '#1E3A5F',
+  black: '#000000',
+  white: '#FFFFFF',
+  gray050: '#F6F6F6',
+  gray200: '#E2E2E2',
+  gray700: '#545454',
+  ink: '#111111',
+  success: '#0A7F5A',
+  successSoft: '#E8F5EF',
+  warning: '#A85F00',
+  focus: 'rgba(0,0,0,0.14)',
+  electric: '#000000',
+  sky: '#545454',
+  deep: '#111111',
 } as const;
 
 export const gym = {
-  black:   '#0A0A0F',
-  dark:    '#141419',
-  slate:   '#1E1E26',
-  muted:   '#71717A',
-  border:  '#27272F',
+  black: '#FFFFFF',
+  dark: '#FFFFFF',
+  slate: '#F6F6F6',
+  muted: '#545454',
+  border: '#E2E2E2',
 } as const;
 
 export const status = {
-  success: '#22C55E',
-  warning: '#F59E0B',
-  danger:  '#EF4444',
-  hype:    '#A855F7',
+  success: '#0A7F5A',
+  warning: '#A85F00',
+  danger: '#B42318',
+  hype: '#111111',
 } as const;
 
 const Colors = {
   light: {
-    text:             '#0A0A0F',
-    background:       '#F4F4F5',
-    tint:             brand.electric,
-    tabIconDefault:   '#71717A',
-    tabIconSelected:  brand.electric,
-    card:             '#FFFFFF',
-    border:           '#E4E4E7',
+    text: '#111111',
+    background: '#FFFFFF',
+    tint: brand.black,
+    tabIconDefault: '#545454',
+    tabIconSelected: brand.black,
+    card: '#FFFFFF',
+    border: '#E2E2E2',
   },
   dark: {
-    text:             '#F4F4F5',
-    background:       gym.black,
-    tint:             brand.electric,
-    tabIconDefault:   gym.muted,
-    tabIconSelected:  brand.electric,
-    card:             gym.dark,
-    border:           gym.border,
+    text: '#111111',
+    background: '#FFFFFF',
+    tint: brand.black,
+    tabIconDefault: '#545454',
+    tabIconSelected: brand.black,
+    card: '#FFFFFF',
+    border: '#E2E2E2',
   },
 } as const;
 

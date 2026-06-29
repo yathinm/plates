@@ -6,6 +6,7 @@ import { withDatabase } from '@nozbe/watermelondb/DatabaseProvider';
 import { Q } from '@nozbe/watermelondb';
 import type Database from '@nozbe/watermelondb/Database';
 
+import { Panel, SectionLabel } from '@/components/ui';
 import type Workout from '@/src/db/models/workout';
 
 type Props = {
@@ -13,12 +14,11 @@ type Props = {
 };
 
 function formatFinishedAt(endTime: number | null): string {
-  if (endTime == null) return '—';
+  if (endTime == null) return 'In progress';
   try {
     return new Date(endTime).toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
     });
@@ -31,13 +31,11 @@ function formatDurationMs(start: number, end: number | null): string {
   if (end == null) return '';
   const sec = Math.max(0, Math.floor((end - start) / 1000));
   const m = Math.floor(sec / 60);
-  const s = sec % 60;
   if (m >= 60) {
     const h = Math.floor(m / 60);
     return `${h}h ${m % 60}m`;
   }
-  if (m === 0) return `${s}s`;
-  return `${m}m ${s}s`;
+  return m === 0 ? `${sec % 60}s` : `${m}m`;
 }
 
 function WorkoutHistoryListBase({ workouts }: Props) {
@@ -45,11 +43,15 @@ function WorkoutHistoryListBase({ workouts }: Props) {
 
   if (workouts.length === 0) {
     return (
-      <View className="mx-5 bg-gym-dark rounded-xl p-6 border border-gym-border items-center">
-        <Text className="text-zinc-400 text-sm">
-          Complete a workout to see your history here.
+      <Panel className="p-6 items-center">
+        <View className="w-12 h-12 rounded-full bg-uber-gray050 border border-uber-gray200 items-center justify-center mb-4">
+          <Text className="text-uber-black text-xl font-bold">0</Text>
+        </View>
+        <Text className="text-uber-black text-lg font-semibold mb-2">No completed sessions</Text>
+        <Text className="text-uber-gray700 text-sm text-center leading-5">
+          Finish a workout and it will land here with timing and session details.
         </Text>
-      </View>
+      </Panel>
     );
   }
 
@@ -57,20 +59,28 @@ function WorkoutHistoryListBase({ workouts }: Props) {
     <FlatList
       data={workouts}
       keyExtractor={(w) => w.id}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 110 }}
       showsVerticalScrollIndicator={false}
       renderItem={({ item: w }) => (
         <Pressable
           onPress={() => router.push(`/workout/${w.id}`)}
-          className="bg-gym-dark rounded-xl p-4 border border-gym-border mb-3 active:opacity-80"
+          className="bg-uber-white rounded-2xl p-4 border border-uber-gray200 mb-3 active:opacity-80"
         >
-          <Text className="text-zinc-100 text-base font-semibold" numberOfLines={1}>
-            {w.name}
-          </Text>
-          <Text className="text-gym-muted text-xs mt-1">
-            {formatFinishedAt(w.endTime)}
-            {w.endTime != null ? ` · ${formatDurationMs(w.startTime, w.endTime)}` : ''}
-          </Text>
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="flex-1 min-w-0">
+              <SectionLabel>{formatFinishedAt(w.endTime)}</SectionLabel>
+              <Text className="text-uber-black text-lg font-semibold" numberOfLines={1}>
+                {w.name}
+              </Text>
+            </View>
+            {w.endTime != null ? (
+              <View className="bg-uber-gray050 border border-uber-gray200 rounded-[10px] px-3 py-2">
+                <Text className="text-uber-ink text-sm font-semibold">
+                  {formatDurationMs(w.startTime, w.endTime)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </Pressable>
       )}
     />

@@ -2,9 +2,7 @@ import { View, Text, Pressable, Platform } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as Haptics from 'expo-haptics';
-import { brand, gym } from '@/constants/Colors';
 
-/** Font Awesome 6 solid icon names (same glyphs as Font Awesome / react-icons FA set; RN uses Expo’s font bundle). */
 const TAB_ICONS: Record<string, string> = {
   feed: 'users',
   history: 'clock-rotate-left',
@@ -22,57 +20,74 @@ const LABEL_MAP: Record<string, string> = {
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View
-      className="flex-row items-end bg-gym-dark border-t border-gym-border"
-      style={{ paddingBottom: Platform.OS === 'ios' ? 24 : 8 }}
+      className="bg-uber-white border-t border-uber-gray200 px-2"
+      style={{
+        paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 18,
+        elevation: 12,
+      }}
     >
-      {state.routes.map((route, idx) => {
-        const isFocused = state.index === idx;
-        const label = LABEL_MAP[route.name] ?? route.name;
-        const iconName = TAB_ICONS[route.name] ?? 'circle';
-        const iconColor = isFocused ? brand.electric : gym.muted;
+      <View className="flex-row items-center pt-2">
+        {state.routes.map((route, idx) => {
+          const isFocused = state.index === idx;
+          const label = LABEL_MAP[route.name] ?? route.name;
+          const iconName = TAB_ICONS[route.name] ?? 'circle';
+          const iconColor = isFocused ? '#FFFFFF' : '#545454';
 
-        function onPress() {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          function onPress() {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
           }
-        }
 
-        function onLongPress() {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          navigation.emit({ type: 'tabLongPress', target: route.key });
-        }
+          function onLongPress() {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            navigation.emit({ type: 'tabLongPress', target: route.key });
+          }
 
-        return (
-          <Pressable
-            key={route.key}
-            className="flex-1 items-center pt-2 pb-1"
-            onPress={onPress}
-            onLongPress={onLongPress}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={label}
-          >
-            <FontAwesome6
-              name={iconName as React.ComponentProps<typeof FontAwesome6>['name']}
-              solid
-              size={22}
-              color={iconColor}
-              style={{ marginBottom: 4 }}
-            />
-            <Text className="text-xs" style={{ color: iconColor }}>
-              {label}
-            </Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={route.key}
+              className="flex-1 items-center justify-center py-2"
+              onPress={onPress}
+              onLongPress={onLongPress}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={label}
+            >
+              <View
+                className={`items-center justify-center rounded-[10px] px-3 py-2 min-w-[64px] ${
+                  isFocused ? 'bg-uber-black' : 'bg-uber-white'
+                }`}
+              >
+                <FontAwesome6
+                  name={iconName as React.ComponentProps<typeof FontAwesome6>['name']}
+                  solid
+                  size={18}
+                  color={iconColor}
+                  style={{ marginBottom: 3 }}
+                />
+                <Text
+                  className={`text-[11px] font-semibold ${isFocused ? 'text-uber-white' : 'text-uber-gray700'}`}
+                >
+                  {label}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

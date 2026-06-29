@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  Pressable,
   ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+
+import { Field, Panel, PrimaryButton, ResponsiveContent, SectionLabel } from '@/components/ui';
 import { useAuth } from '@/stores/auth';
 import { ApiError } from '@/utils/api';
 
@@ -21,6 +22,8 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { width } = useWindowDimensions();
+  const isWide = width >= 768;
 
   async function handleSignup() {
     if (!username.trim() || !email.trim() || !password) return;
@@ -47,89 +50,101 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gym-black"
+      className="flex-1 bg-uber-gray050"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerClassName="flex-grow justify-center px-8 py-12"
+        contentContainerClassName="flex-grow justify-center px-5 py-8"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-4xl font-bold text-zinc-100 mb-1">
-          Join Plates
-        </Text>
-        <Text className="text-gym-muted text-base mb-10">
-          Create your account and start lifting.
-        </Text>
-
-        {error ? (
-          <View className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 mb-4">
-            <Text className="text-danger text-sm">{error}</Text>
-          </View>
-        ) : null}
-
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-3"
-          placeholder="Username"
-          placeholderTextColor="#71717A"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={username}
-          onChangeText={setUsername}
-        />
-
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-3"
-          placeholder="Email"
-          placeholderTextColor="#71717A"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-3"
-          placeholder="Display name (optional)"
-          placeholderTextColor="#71717A"
-          value={displayName}
-          onChangeText={setDisplayName}
-        />
-
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-6"
-          placeholder="Password"
-          placeholderTextColor="#71717A"
-          secureTextEntry
-          autoCapitalize="none"
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <Pressable
-          className="bg-brand-electric rounded-xl py-4 items-center mb-6 active:opacity-80"
-          onPress={handleSignup}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-base font-semibold">
-              Create Account
-            </Text>
-          )}
-        </Pressable>
-
-        <View className="flex-row justify-center">
-          <Text className="text-gym-muted text-sm">Already have an account? </Text>
-          <Link href="/(auth)/login" asChild>
-            <Pressable>
-              <Text className="text-brand-electric text-sm font-semibold">
-                Log In
+        <ResponsiveContent maxWidth={1040}>
+          <View className={isWide ? 'flex-row items-center gap-8' : ''}>
+            <View className={isWide ? 'flex-1 pr-6' : 'mb-8'}>
+              <SectionLabel>Start tracking</SectionLabel>
+              <Text
+                className="text-uber-black font-bold"
+                style={{
+                  fontSize: isWide ? 56 : 42,
+                  lineHeight: isWide ? 60 : 46,
+                  letterSpacing: -0.8,
+                }}
+              >
+                Build a clean training record.
               </Text>
-            </Pressable>
-          </Link>
-        </View>
+              <Text className="text-uber-ink text-lg leading-7 mt-4 max-w-[430px]">
+                Create a profile, start a session, and log your first set in under a minute.
+              </Text>
+            </View>
+
+            <Panel className={isWide ? 'w-[440px] p-6' : 'p-5'}>
+              <Text className="text-uber-black text-2xl font-semibold mb-1">
+                Create account
+              </Text>
+              <Text className="text-uber-gray700 text-sm leading-5 mb-5">
+                Keep it short. You can refine your profile later.
+              </Text>
+
+              {error ? (
+                <View className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-3 mb-4">
+                  <Text className="text-danger text-sm">{error}</Text>
+                </View>
+              ) : null}
+
+              <Field
+                label="Username"
+                placeholder="alex_lifts"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={username}
+                onChangeText={setUsername}
+              />
+
+              <Field
+                label="Email"
+                placeholder="alex@example.com"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              <Field
+                label="Display name"
+                placeholder="Optional"
+                value={displayName}
+                onChangeText={setDisplayName}
+              />
+
+              <Field
+                label="Password"
+                placeholder="Minimum 8 characters"
+                secureTextEntry
+                autoCapitalize="none"
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <PrimaryButton
+                className="mt-2 mb-5"
+                onPress={handleSignup}
+                disabled={loading || !username.trim() || !email.trim() || password.length < 8}
+                loading={loading}
+              >
+                Create account
+              </PrimaryButton>
+
+              <View className="flex-row justify-center">
+                <Text className="text-uber-gray700 text-sm">Already set up? </Text>
+                <Link href="/(auth)/login" asChild>
+                  <Pressable hitSlop={8}>
+                    <Text className="text-uber-black text-sm font-semibold">Log in</Text>
+                  </Pressable>
+                </Link>
+              </View>
+            </Panel>
+          </View>
+        </ResponsiveContent>
       </ScrollView>
     </KeyboardAvoidingView>
   );

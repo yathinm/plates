@@ -7,12 +7,13 @@ import { Q } from '@nozbe/watermelondb';
 import type Database from '@nozbe/watermelondb/Database';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MetricTile, Panel, SectionLabel } from '@/components/ui';
 import type Workout from '@/src/db/models/workout';
 import type Exercise from '@/src/db/models/exercise';
 import type SetModel from '@/src/db/models/set';
 
 function formatFinishedAt(endTime: number | null): string {
-  if (endTime == null) return '—';
+  if (endTime == null) return 'In progress';
   try {
     return new Date(endTime).toLocaleString(undefined, {
       month: 'short',
@@ -27,16 +28,14 @@ function formatFinishedAt(endTime: number | null): string {
 }
 
 function formatDurationMs(start: number, end: number | null): string {
-  if (end == null) return '';
+  if (end == null) return '—';
   const sec = Math.max(0, Math.floor((end - start) / 1000));
   const m = Math.floor(sec / 60);
-  const s = sec % 60;
   if (m >= 60) {
     const h = Math.floor(m / 60);
     return `${h}h ${m % 60}m`;
   }
-  if (m === 0) return `${s}s`;
-  return `${m}m ${s}s`;
+  return m === 0 ? `${sec % 60}s` : `${m}m`;
 }
 
 type BaseProps = {
@@ -53,17 +52,18 @@ function PastWorkoutDetailBase({ workoutId, workouts, exercises, sets }: BasePro
 
   if (!workout) {
     return (
-      <View className="flex-1 bg-gym-black px-5" style={{ paddingTop: insets.top }}>
-        <Pressable onPress={() => router.back()} className="py-3" hitSlop={12}>
-          <Text className="text-brand-electric text-base">← Back</Text>
+      <View className="flex-1 bg-uber-white px-5" style={{ paddingTop: insets.top }}>
+        <Pressable onPress={() => router.back()} className="py-4" hitSlop={12}>
+          <Text className="text-uber-black text-base font-semibold">Back</Text>
         </Pressable>
-        <Text className="text-zinc-400 mt-6 text-base">This workout could not be found.</Text>
+        <Text className="text-uber-gray700 mt-6 text-base">This workout could not be found.</Text>
       </View>
     );
   }
 
   const exerciseIds = new Set(exercises.map((e) => e.id));
   const scopedSets = sets.filter((s) => exerciseIds.has(s.exerciseId));
+  const totalVolume = scopedSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0);
 
   const sortedExercises = [...exercises].sort((a, b) => {
     const minT = (exId: string) =>
@@ -79,25 +79,29 @@ function PastWorkoutDetailBase({ workoutId, workouts, exercises, sets }: BasePro
   const displayName = (ex: Exercise) => ex.note?.trim() || 'Exercise';
 
   return (
-    <View key={workoutId} className="flex-1 bg-gym-black" style={{ paddingTop: insets.top }}>
-      <Pressable onPress={() => router.back()} className="px-5 py-3" hitSlop={12}>
-        <Text className="text-brand-electric text-base">← Back</Text>
-      </Pressable>
+    <View key={workoutId} className="flex-1 bg-uber-white" style={{ paddingTop: insets.top }}>
       <ScrollView
         className="flex-1 px-5"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32, maxWidth: 1040, width: '100%', alignSelf: 'center' }}
         showsVerticalScrollIndicator={false}
       >
-        <Text className="text-2xl font-bold text-zinc-100 mb-1">{workout.name}</Text>
-        <Text className="text-gym-muted text-sm mb-6">
-          {formatFinishedAt(workout.endTime)}
-          {workout.endTime != null
-            ? ` · ${formatDurationMs(workout.startTime, workout.endTime)}`
-            : ''}
-        </Text>
+        <Pressable onPress={() => router.back()} className="py-4" hitSlop={12}>
+          <Text className="text-uber-black text-base font-semibold">Back</Text>
+        </Pressable>
+
+        <SectionLabel>{formatFinishedAt(workout.endTime)}</SectionLabel>
+        <Text className="text-uber-black text-4xl font-bold mb-4">{workout.name}</Text>
+
+        <View className="flex-row gap-3 mb-6">
+          <MetricTile label="Duration" value={formatDurationMs(workout.startTime, workout.endTime)} />
+          <MetricTile label="Sets" value={scopedSets.length} />
+          <MetricTile label="Volume" value={Math.round(totalVolume)} suffix="kg" />
+        </View>
 
         {sortedExercises.length === 0 ? (
-          <Text className="text-zinc-500 text-sm">No exercises logged for this workout.</Text>
+          <Panel className="p-6 items-center">
+            <Text className="text-uber-gray700 text-sm">No exercises logged for this workout.</Text>
+          </Panel>
         ) : (
           sortedExercises.map((exercise) => {
             const exSets = scopedSets
@@ -105,34 +109,34 @@ function PastWorkoutDetailBase({ workoutId, workouts, exercises, sets }: BasePro
               .sort((a, b) => (a.setNumber ?? 0) - (b.setNumber ?? 0));
             return (
               <View key={exercise.id} className="mb-6">
-                <Text className="text-zinc-300 text-sm font-semibold mb-2">
+                <Text className="text-uber-black text-xl font-semibold mb-2">
                   {displayName(exercise)}
                 </Text>
-                <View className="bg-gym-dark rounded-xl border border-gym-border overflow-hidden">
-                  <View className="flex-row px-4 py-2 border-b border-gym-border">
-                    <Text className="text-gym-muted text-xs w-10">SET</Text>
-                    <Text className="text-gym-muted text-xs flex-1 text-center">KG</Text>
-                    <Text className="text-gym-muted text-xs flex-1 text-center">REPS</Text>
+                <Panel className="overflow-hidden">
+                  <View className="flex-row px-4 py-3 bg-uber-gray050 border-b border-uber-gray200">
+                    <Text className="text-uber-gray700 text-xs font-semibold w-12">SET</Text>
+                    <Text className="text-uber-gray700 text-xs font-semibold flex-1 text-center">KG</Text>
+                    <Text className="text-uber-gray700 text-xs font-semibold flex-1 text-center">REPS</Text>
                   </View>
                   {exSets.length === 0 ? (
-                    <Text className="text-zinc-500 text-sm px-4 py-3">No sets</Text>
+                    <Text className="text-uber-gray700 text-sm px-4 py-4">No sets</Text>
                   ) : (
                     exSets.map((s) => (
                       <View
                         key={s.id}
-                        className="flex-row items-center px-4 py-3 border-b border-gym-border/50"
+                        className="flex-row items-center px-4 py-4 border-b border-uber-gray200"
                       >
-                        <Text className="text-zinc-400 text-sm w-10">{s.setNumber ?? '—'}</Text>
-                        <Text className="text-zinc-100 text-sm flex-1 text-center font-mono">
+                        <Text className="text-uber-gray700 text-sm w-12">{s.setNumber ?? '—'}</Text>
+                        <Text className="text-uber-black text-base flex-1 text-center font-mono">
                           {s.weight}
                         </Text>
-                        <Text className="text-zinc-100 text-sm flex-1 text-center font-mono">
+                        <Text className="text-uber-black text-base flex-1 text-center font-mono">
                           {s.reps}
                         </Text>
                       </View>
                     ))
                   )}
-                </View>
+                </Panel>
               </View>
             );
           })

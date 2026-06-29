@@ -8,6 +8,7 @@ import type Database from '@nozbe/watermelondb/Database';
 import type Workout from '@/src/db/models/workout';
 import type Exercise from '@/src/db/models/exercise';
 import type SetModel from '@/src/db/models/set';
+import { Panel, SectionLabel } from '@/components/ui';
 
 type BaseProps = {
   /** 0 or 1 row — query-based observe never throws if the row was wiped (e.g. DB reset while Zustand still had `localDbId`). */
@@ -25,13 +26,13 @@ function WorkoutSummaryBase({ workouts, exercises, sets }: BaseProps) {
   const workout = workouts[0];
   if (!workout) {
     return (
-      <View className="bg-gym-dark rounded-lg p-3 border border-gym-border">
-        <Text className="text-gym-muted text-xs mb-1">Local database</Text>
-        <Text className="text-warning text-sm">
+      <Panel className="p-4">
+        <SectionLabel>Local database</SectionLabel>
+        <Text className="text-warning text-sm leading-5">
           No workout row for this session (data may have been reset). Sets above still use the live
           session; start a new workout after finishing to sync again.
         </Text>
-      </View>
+      </Panel>
     );
   }
 
@@ -44,18 +45,18 @@ function WorkoutSummaryBase({ workouts, exercises, sets }: BaseProps) {
   );
 
   return (
-    <View className="bg-gym-dark rounded-lg p-3 border border-gym-border">
-      <Text className="text-gym-muted text-xs mb-1">Reactive Summary (WatermelonDB)</Text>
-      <Text className="text-zinc-100 text-sm font-semibold" numberOfLines={1}>
+    <Panel className="p-4">
+      <SectionLabel>Reactive summary</SectionLabel>
+      <Text className="text-uber-black text-base font-semibold" numberOfLines={1}>
         {workout.name}
       </Text>
-      <Text className="text-zinc-400 text-xs mt-1">
+      <Text className="text-uber-gray700 text-sm mt-1">
         {exercises.length} exercises • {totalSets} sets • {Math.round(totalVolume)} kg
       </Text>
-      <Text className="text-gym-muted text-[11px] mt-1">
+      <Text className="text-uber-gray700 text-xs mt-2">
         Updates automatically when sets are added/deleted.
       </Text>
-    </View>
+    </Panel>
   );
 }
 

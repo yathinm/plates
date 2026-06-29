@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+
+import { Field, Panel, PrimaryButton, ResponsiveContent, SectionLabel } from '@/components/ui';
 import { useAuth } from '@/stores/auth';
 import { ApiError } from '@/utils/api';
 
@@ -18,6 +19,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { width } = useWindowDimensions();
+  const isWide = width >= 768;
 
   async function handleLogin() {
     if (!identifier.trim() || !password) return;
@@ -39,64 +42,88 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-gym-black"
+      className="flex-1 bg-uber-gray050"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View className="flex-1 justify-center px-8">
-        <Text className="text-4xl font-bold text-zinc-100 mb-1">Plates</Text>
-        <Text className="text-gym-muted text-base mb-10">
-          Log in to start tracking.
-        </Text>
-
-        {error ? (
-          <View className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 mb-4">
-            <Text className="text-danger text-sm">{error}</Text>
+      <ResponsiveContent className="flex-1 justify-center px-5 py-8" maxWidth={1040}>
+        <View className={isWide ? 'flex-row items-center gap-8' : ''}>
+          <View className={isWide ? 'flex-1 pr-6' : 'mb-8'}>
+            <SectionLabel>Training operations</SectionLabel>
+            <Text
+              className="text-uber-black font-bold"
+              style={{
+                fontSize: isWide ? 64 : 48,
+                lineHeight: isWide ? 66 : 50,
+                letterSpacing: -1,
+              }}
+            >
+              Plates
+            </Text>
+            <Text className="text-uber-ink text-lg leading-7 mt-4 max-w-[430px]">
+              Log workouts fast, keep every set organized, and stay focused on the next lift.
+            </Text>
+            <View className="flex-row flex-wrap gap-3 mt-7">
+              {['Offline-first', 'Fast logging', 'Live sync'].map((item) => (
+                <View key={item} className="bg-uber-white border border-uber-gray200 rounded-[10px] px-3 py-2">
+                  <Text className="text-uber-gray700 text-xs font-semibold">{item}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        ) : null}
 
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-3"
-          placeholder="Username or email"
-          placeholderTextColor="#71717A"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={identifier}
-          onChangeText={setIdentifier}
-        />
+          <Panel className={isWide ? 'w-[420px] p-6' : 'p-5'}>
+            <Text className="text-uber-black text-2xl font-semibold mb-1">Sign in</Text>
+            <Text className="text-uber-gray700 text-sm leading-5 mb-5">
+              Use your username or email to continue.
+            </Text>
 
-        <TextInput
-          className="bg-gym-slate border border-gym-border rounded-xl px-4 py-3.5 text-zinc-100 text-base mb-6"
-          placeholder="Password"
-          placeholderTextColor="#71717A"
-          secureTextEntry
-          autoCapitalize="none"
-          value={password}
-          onChangeText={setPassword}
-        />
+            {error ? (
+              <View className="bg-red-50 border border-red-200 rounded-[10px] px-4 py-3 mb-4">
+                <Text className="text-danger text-sm">{error}</Text>
+              </View>
+            ) : null}
 
-        <Pressable
-          className="bg-brand-electric rounded-xl py-4 items-center mb-6 active:opacity-80"
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-base font-semibold">Log In</Text>
-          )}
-        </Pressable>
+            <Field
+              label="Account"
+              placeholder="Username or email"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={identifier}
+              onChangeText={setIdentifier}
+            />
 
-        <View className="flex-row justify-center">
-          <Text className="text-gym-muted text-sm">Don't have an account? </Text>
-          <Link href="/(auth)/signup" asChild>
-            <Pressable>
-              <Text className="text-brand-electric text-sm font-semibold">
-                Sign Up
-              </Text>
-            </Pressable>
-          </Link>
+            <Field
+              label="Password"
+              placeholder="Password"
+              secureTextEntry
+              autoCapitalize="none"
+              value={password}
+              onChangeText={setPassword}
+            />
+
+            <PrimaryButton
+              className="mt-2 mb-5"
+              onPress={handleLogin}
+              disabled={loading || !identifier.trim() || !password}
+              loading={loading}
+            >
+              Log in
+            </PrimaryButton>
+
+            <View className="flex-row justify-center">
+              <Text className="text-uber-gray700 text-sm">New to Plates? </Text>
+              <Link href="/(auth)/signup" asChild>
+                <Pressable hitSlop={8}>
+                  <Text className="text-uber-black text-sm font-semibold">Create account</Text>
+                </Pressable>
+              </Link>
+            </View>
+            <Text className="text-uber-gray700 text-xs text-center mt-5">
+              Local demo: alex_lifts / password123
+            </Text>
+          </Panel>
         </View>
-      </View>
+      </ResponsiveContent>
     </KeyboardAvoidingView>
   );
 }
